@@ -116,7 +116,7 @@ function CellMemoMarks({
                 visible
                   ? digitHighlight
                     ? "font-extrabold tabular-nums text-zinc-900"
-                    : "font-medium tabular-nums text-zinc-700"
+                    : "font-medium tabular-nums text-zinc-400"
                   : "invisible tabular-nums"
               }
             >
@@ -367,7 +367,9 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
                   showMemo
                     ? "items-stretch p-0"
                     : "items-center justify-center p-0",
-                  !showMemo && value !== 0 ? "text-base sm:text-lg" : "",
+                  !showMemo && value !== 0
+                    ? "text-xl leading-none sm:text-2xl sm:leading-none"
+                    : "",
                   cellBorderClasses(i),
                   cellSurfaceClasses(readOnly, h),
                 ].join(" ")}
