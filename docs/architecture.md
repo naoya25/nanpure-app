@@ -77,8 +77,8 @@ lib/
     grid.ts               # 盤面 81 文字の表示用分割など（純粋関数・UI/validates から利用）
     uuid.ts               # `isUuid` など、ルート param / 入力の共通検証
   validates/
-    grid.ts               # 81 文字 ↔ セル、固定マス判定（ルール・検証の本体）
-    validate.ts           # マス単位の正誤
+    grid.ts               # `parsePuzzle81` など盤面のパース
+    validate.ts           # マス正誤・全マス埋まり・正解一致
 components/
   nanpure/
     SudokuBoard.tsx
