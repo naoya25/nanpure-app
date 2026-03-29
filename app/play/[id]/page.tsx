@@ -94,7 +94,7 @@ export default async function PlayByIdPage({ params }: Props) {
         puzzle_81: puzzle.puzzle_81,
         solution_81: puzzle.solution_81,
         description: puzzle.description,
-        difficulty_id: puzzle.difficulty_id,
+        level: puzzle.level,
       }}
     />
   );

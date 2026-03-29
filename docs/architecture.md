@@ -92,7 +92,7 @@ components/
 - `puzzles.id`: `uuid`
 - `puzzle_81`: 81 文字、`0`〜`9`（`0` = 空）
 - `solution_81`: 81 文字、`1`〜`9`
-- `difficulty_id` → `difficulties`（MVP では表示に使うか任意）
+- `level`: `int`、1..100（帯の目安: 初級 1–20 / 中級 21–50 / 上級 51–100。テクニック深度などで決定）
 
 RLS・ポリシーは既存マイグレーションのとおり。スキーマ変更は **必ず** `supabase/migrations/` に SQL として残す。
 
