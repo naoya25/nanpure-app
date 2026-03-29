@@ -2,7 +2,7 @@ import { SUDOKU_CELLS } from "@/lib/validates/grid";
 import {
   sudokuEnumerateSolutions,
   sudokuSolutionCountKind,
-} from "@/lib/validates/sudoku_solver";
+} from "@/lib/algorithms/sudoku_solver";
 
 const DIGITS_1_9 = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
 

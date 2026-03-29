@@ -71,4 +71,4 @@
 
 細部の定義は実装時に Wikipedia や Hodoku 等の図付き説明と突き合わせるとよい。
 
-`docs/architecture.md` のレイヤー方針に従い、純粋ロジックは `lib/validates/`、プレイ盤面の集約モデルは `lib/models/` に置く想定とする（将来の解法エンジンも `lib/validates/` または隣接モジュールで拡張しやすい）。
+`docs/architecture.md` のレイヤー方針に従い、パース・正誤などは `lib/validates/`、文字列盤の求解・列挙は `lib/algorithms/`、プレイ盤面の集約モデルは `lib/models/` に置く想定とする。
