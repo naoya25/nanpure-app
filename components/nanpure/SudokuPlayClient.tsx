@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { parsePuzzle81, SUDOKU_CELLS } from "@/lib/validates/grid";
+import { SudokuGrid } from "@/lib/nanpure/sudoku_grid";
+import { parsePuzzle81 } from "@/lib/validates/grid";
 import {
   isBoardComplete,
   isBoardMatchingSolution,
@@ -76,10 +77,6 @@ function cellHighlights(
   };
 }
 
-function emptyMemoMasks(): number[] {
-  return Array.from({ length: SUDOKU_CELLS }, () => 0);
-}
-
 function memoMaskHas(mask: number, digit: number): boolean {
   if (digit < 1 || digit > 9) return false;
   return (mask & (1 << (digit - 1))) !== 0;
@@ -141,26 +138,23 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
     [puzzle.puzzle_81],
   );
 
-  const [grid, setGrid] = useState<number[]>(() => [...seedValues]);
+  const [board, setBoard] = useState(() => SudokuGrid.fromValues(seedValues));
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [mistakes, setMistakes] = useState(0);
   const [inputWarning, setInputWarning] = useState<string | null>(null);
   const [phase, setPhase] = useState<"playing" | "result">("playing");
   const [won, setWon] = useState<boolean | null>(null);
-  /**
-   * メモ（1〜9）をマスごとのビットマスクで保持。`grid`・正誤・終了数字判定とは独立。
-   * bit (d-1) が立っていれば数字 d のメモあり。
-   */
-  const [memoMasks, setMemoMasks] = useState<number[]>(() => emptyMemoMasks());
+
+  const gridValues = useMemo(() => [...board.values()], [board]);
 
   /** ヒントマス、またはユーザーが入れた数字がそのマスの正解と一致しているマスは編集不可 */
   const cellReadOnly = useMemo(
     () =>
-      grid.map((v, i) => {
+      gridValues.map((v, i) => {
         if (fixed[i]) return true;
         return v >= 1 && v <= 9 && String(v) === puzzle.solution_81[i];
       }),
-    [grid, fixed, puzzle.solution_81],
+    [gridValues, fixed, puzzle.solution_81],
   );
 
   const digitComplete = useMemo(() => {
@@ -168,10 +162,10 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
     return [
       false,
       ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) =>
-        isEverySolutionCellForDigitFilled(d, grid, sol),
+        isEverySolutionCellForDigitFilled(d, gridValues, sol),
       ),
     ] as const;
-  }, [grid, puzzle.solution_81]);
+  }, [gridValues, puzzle.solution_81]);
 
   const applyDigit = useCallback(
     (digit: number) => {
@@ -182,9 +176,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       const correct = isDigitCorrectForSolution(digit, puzzle.solution_81, i);
 
       if (!correct) {
-        const next = [...grid];
-        next[i] = 0;
-        setGrid(next);
+        setBoard((b) => b.clearValueKeepMemo(i));
         setMistakes((m) => m + 1);
         setInputWarning(
           `「${digit}」はこのマスでは正しくありません。別の数字を試してください。`,
@@ -192,19 +184,14 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
         return;
       }
 
-      const next = [...grid];
-      next[i] = digit;
-      setGrid(next);
-      setMemoMasks((masks) => {
-        const copy = [...masks];
-        copy[i] = 0;
-        return copy;
-      });
+      const next = board.placeDigit(i, digit);
+      setBoard(next);
       setInputWarning(null);
 
-      if (isBoardComplete(next)) {
+      const values = [...next.values()];
+      if (isBoardComplete(values)) {
         setPhase("result");
-        setWon(isBoardMatchingSolution(next, puzzle.solution_81));
+        setWon(isBoardMatchingSolution(values, puzzle.solution_81));
       }
     },
     [
@@ -212,7 +199,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       digitComplete,
       selectedIndex,
       cellReadOnly,
-      grid,
+      board,
       puzzle.solution_81,
     ],
   );
@@ -221,16 +208,9 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
     if (phase !== "playing") return;
     if (selectedIndex === null || cellReadOnly[selectedIndex]) return;
     const i = selectedIndex;
-    const next = [...grid];
-    next[i] = 0;
-    setGrid(next);
-    setMemoMasks((masks) => {
-      const copy = [...masks];
-      copy[i] = 0;
-      return copy;
-    });
+    setBoard((b) => b.clearCell(i));
     setInputWarning(null);
-  }, [phase, selectedIndex, cellReadOnly, grid]);
+  }, [phase, selectedIndex, cellReadOnly]);
 
   const toggleMemoAtSelection = useCallback(
     (digit: number) => {
@@ -238,14 +218,10 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       if (digit < 1 || digit > 9) return;
       if (selectedIndex === null || cellReadOnly[selectedIndex]) return;
       const i = selectedIndex;
-      if (grid[i] !== 0) return;
-      setMemoMasks((masks) => {
-        const next = [...masks];
-        next[i] ^= 1 << (digit - 1);
-        return next;
-      });
+      if (board.cellAt(i).value !== 0) return;
+      setBoard((b) => b.toggleMemo(i, digit));
     },
-    [phase, selectedIndex, cellReadOnly, grid],
+    [phase, selectedIndex, cellReadOnly, board],
   );
 
   useEffect(() => {
@@ -352,10 +328,10 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
 
       <div className="inline-block rounded-lg border-2 border-zinc-700 bg-white p-0.5 shadow-sm">
         <div className="grid grid-cols-9">
-          {grid.map((value, i) => {
+          {gridValues.map((value, i) => {
             const readOnly = cellReadOnly[i];
-            const h = cellHighlights(i, selectedIndex, grid);
-            const mask = memoMasks[i];
+            const h = cellHighlights(i, selectedIndex, gridValues);
+            const mask = board.cellAt(i).memoMask;
             const showMemo = value === 0 && mask !== 0;
             return (
               <button
