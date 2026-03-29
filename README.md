@@ -21,3 +21,18 @@ npm run dev
 ## データベース
 
 スキーマは `supabase/migrations/puzzles.sql` を参照。Supabase プロジェクトにマイグレーションを適用してください。
+
+## 問題を生成して DB に追加（CLI）
+
+`.env.local` を用意したうえで:
+
+```bash
+npm run create-puzzle
+npm run create-puzzle -- --count=5
+```
+
+## TODO
+- 問題作成機能
+- 問題投稿機能
+- 同ユニット内のメモ自動削除機能
+- 
