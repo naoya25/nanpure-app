@@ -274,7 +274,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       <p className="mt-3 text-xs text-zinc-500">
         マスを選ぶと、その行・列・3×3
         ブロックと同じ数字が薄く色付きます。確定したマスも選べますが上書きはできません。1〜9
-        はキーボード可。消すは Delete / ボタン。
+        はキーボード可。空のマスを消す場合は Delete / Backspace。
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
@@ -288,13 +288,6 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
             {n}
           </button>
         ))}
-        <button
-          type="button"
-          onClick={clearCell}
-          className="h-10 min-w-18 rounded-md border border-zinc-300 bg-white px-2 text-sm font-medium text-zinc-700 hover:bg-zinc-50"
-        >
-          消す
-        </button>
       </div>
     </main>
   );
