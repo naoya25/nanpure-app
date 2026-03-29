@@ -8,6 +8,7 @@ import {
   isBoardComplete,
   isBoardMatchingSolution,
   isDigitCorrectForSolution,
+  isEverySolutionCellForDigitFilled,
 } from "@/lib/validates/validate";
 
 export type SudokuPlayPuzzle = {
@@ -66,8 +67,7 @@ function cellHighlights(
     (Math.floor(ri / 3) === Math.floor(sr / 3) &&
       Math.floor(ci / 3) === Math.floor(sc / 3));
   const sv = grid[selectedIndex];
-  const digitMatch =
-    sv >= 1 && sv <= 9 && grid[index] === sv && !selected;
+  const digitMatch = sv >= 1 && sv <= 9 && grid[index] === sv && !selected;
   const inBandOnly = inBand && !selected;
   return {
     selected,
@@ -118,9 +118,20 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
     [grid, fixed, puzzle.solution_81],
   );
 
+  const digitComplete = useMemo(() => {
+    const sol = puzzle.solution_81;
+    return [
+      false,
+      ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) =>
+        isEverySolutionCellForDigitFilled(d, grid, sol),
+      ),
+    ] as const;
+  }, [grid, puzzle.solution_81]);
+
   const applyDigit = useCallback(
     (digit: number) => {
       if (phase !== "playing") return;
+      if (digitComplete[digit]) return;
       if (selectedIndex === null || cellReadOnly[selectedIndex]) return;
       const i = selectedIndex;
       const correct = isDigitCorrectForSolution(digit, puzzle.solution_81, i);
@@ -146,7 +157,14 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
         setWon(isBoardMatchingSolution(next, puzzle.solution_81));
       }
     },
-    [phase, selectedIndex, cellReadOnly, grid, puzzle.solution_81],
+    [
+      phase,
+      digitComplete,
+      selectedIndex,
+      cellReadOnly,
+      grid,
+      puzzle.solution_81,
+    ],
   );
 
   const clearCell = useCallback(() => {
@@ -271,23 +289,26 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
         </div>
       </div>
 
-      <p className="mt-3 text-xs text-zinc-500">
-        マスを選ぶと、その行・列・3×3
-        ブロックと同じ数字が薄く色付きます。確定したマスも選べますが上書きはできません。1〜9
-        はキーボード可。空のマスを消す場合は Delete / Backspace。
-      </p>
-
       <div className="mt-6 flex flex-wrap gap-2">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-          <button
-            key={n}
-            type="button"
-            onClick={() => applyDigit(n)}
-            className="h-10 w-10 rounded-md border border-zinc-300 bg-white text-sm font-medium text-zinc-900 hover:bg-zinc-50"
-          >
-            {n}
-          </button>
-        ))}
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => {
+          const done = digitComplete[n];
+          return (
+            <button
+              key={n}
+              type="button"
+              disabled={done}
+              onClick={() => applyDigit(n)}
+              className={[
+                "h-10 w-10 rounded-md border text-sm font-medium",
+                done
+                  ? "pointer-events-none cursor-default border-transparent bg-transparent text-transparent opacity-0"
+                  : "border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50",
+              ].join(" ")}
+            >
+              {n}
+            </button>
+          );
+        })}
       </div>
     </main>
   );
