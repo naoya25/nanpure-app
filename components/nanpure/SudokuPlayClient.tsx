@@ -178,6 +178,12 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
   }, [phase, selectedIndex, cellReadOnly, grid]);
 
   useEffect(() => {
+    if (inputWarning === null) return;
+    const id = window.setTimeout(() => setInputWarning(null), 1000);
+    return () => window.clearTimeout(id);
+  }, [inputWarning]);
+
+  useEffect(() => {
     if (phase !== "playing") return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.key >= "1" && e.key <= "9") {
@@ -230,7 +236,8 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       {inputWarning ? (
         <div
           role="alert"
-          className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+          aria-live="assertive"
+          className="fixed top-[max(1rem,env(safe-area-inset-top,0px))] left-1/2 z-50 w-[min(calc(100vw-2rem),32rem)] -translate-x-1/2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 shadow-lg"
         >
           {inputWarning}
         </div>
