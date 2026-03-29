@@ -2,9 +2,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { loadRandomPuzzleForPlay } from "@/lib/services/load_random_puzzle_for_play";
-import { createClient } from "@/lib/supabase/server";
-
-export const dynamic = "force-dynamic";
+import {
+  createClient,
+  supabaseServerConfigErrorMessage,
+} from "@/lib/supabase/server";
 
 export const metadata = {
   title: "プレイ（問題を選ぶ） | nanpure-app",
@@ -15,6 +16,21 @@ export const metadata = {
  * 共有 URL・ブックマークは常に `/play/[id]` を指す。
  */
 export default async function PlayRandomPage() {
+  const configError = supabaseServerConfigErrorMessage();
+  if (configError) {
+    return (
+      <main className="mx-auto flex max-w-lg flex-col gap-6 px-4 py-16">
+        <h1 className="text-xl font-semibold text-zinc-900">
+          設定を確認してください
+        </h1>
+        <p className="text-zinc-600">{configError}</p>
+        <Link href="/" className="text-sm font-medium text-zinc-900 underline">
+          トップへ
+        </Link>
+      </main>
+    );
+  }
+
   const supabase = await createClient();
   const result = await loadRandomPuzzleForPlay(supabase);
 

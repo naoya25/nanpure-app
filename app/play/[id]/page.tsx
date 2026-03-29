@@ -2,9 +2,10 @@ import Link from "next/link";
 
 import { SudokuPlayClient } from "@/components/nanpure/SudokuPlayClient";
 import { loadPuzzleForPlay } from "@/lib/services/load_puzzle_for_play";
-import { createClient } from "@/lib/supabase/server";
-
-export const dynamic = "force-dynamic";
+import {
+  createClient,
+  supabaseServerConfigErrorMessage,
+} from "@/lib/supabase/server";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -18,6 +19,19 @@ export async function generateMetadata({ params }: Props) {
 }
 
 export default async function PlayByIdPage({ params }: Props) {
+  const configError = supabaseServerConfigErrorMessage();
+  if (configError) {
+    return (
+      <main className="mx-auto flex max-w-lg flex-col gap-6 px-4 py-16">
+        <h1 className="text-xl font-semibold text-zinc-900">設定を確認してください</h1>
+        <p className="text-zinc-600">{configError}</p>
+        <Link href="/" className="text-sm font-medium text-zinc-900 underline">
+          トップへ
+        </Link>
+      </main>
+    );
+  }
+
   const { id } = await params;
   const supabase = await createClient();
   const result = await loadPuzzleForPlay(supabase, id);
