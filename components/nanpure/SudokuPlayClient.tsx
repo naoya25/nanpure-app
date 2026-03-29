@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { parsePuzzle81 } from "@/lib/validates/grid";
+import { parsePuzzle81, SUDOKU_CELLS } from "@/lib/validates/grid";
 import {
   isBoardComplete,
   isBoardMatchingSolution,
@@ -76,6 +76,46 @@ function cellHighlights(
   };
 }
 
+function emptyMemoMasks(): number[] {
+  return Array.from({ length: SUDOKU_CELLS }, () => 0);
+}
+
+function memoMaskHas(mask: number, digit: number): boolean {
+  if (digit < 1 || digit > 9) return false;
+  return (mask & (1 << (digit - 1))) !== 0;
+}
+
+/**
+ * 数字行・テンキーの 1〜9。Shift で `e.key` が記号でも `code` の `Digit*` / `Numpad*` で拾う。
+ */
+function digitFromKeyboardEvent(e: KeyboardEvent): number | null {
+  const row = /^Digit([1-9])$/.exec(e.code);
+  if (row) return Number(row[1]);
+  const pad = /^Numpad([1-9])$/.exec(e.code);
+  if (pad) return Number(pad[1]);
+  if (e.key >= "1" && e.key <= "9") return Number(e.key);
+  return null;
+}
+
+function CellMemoMarks({ mask }: { mask: number }) {
+  return (
+    <span className="pointer-events-none flex h-full min-h-0 w-full items-center justify-center px-0.5 py-0.5">
+      <span className="grid aspect-square h-full w-full max-h-full max-w-full grid-cols-3 grid-rows-3 place-items-center text-[0.58rem] font-semibold leading-none text-zinc-700 sm:text-[0.68rem]">
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
+          <span
+            key={d}
+            className={
+              memoMaskHas(mask, d) ? "tabular-nums" : "invisible tabular-nums"
+            }
+          >
+            {d}
+          </span>
+        ))}
+      </span>
+    </span>
+  );
+}
+
 function cellSurfaceClasses(readOnly: boolean, h: CellHighlight): string {
   if (h.selected) {
     return "relative z-10 bg-sky-200 ring-2 ring-inset ring-blue-600";
@@ -107,6 +147,11 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
   const [inputWarning, setInputWarning] = useState<string | null>(null);
   const [phase, setPhase] = useState<"playing" | "result">("playing");
   const [won, setWon] = useState<boolean | null>(null);
+  /**
+   * メモ（1〜9）をマスごとのビットマスクで保持。`grid`・正誤・終了数字判定とは独立。
+   * bit (d-1) が立っていれば数字 d のメモあり。
+   */
+  const [memoMasks, setMemoMasks] = useState<number[]>(() => emptyMemoMasks());
 
   /** ヒントマス、またはユーザーが入れた数字がそのマスの正解と一致しているマスは編集不可 */
   const cellReadOnly = useMemo(
@@ -150,6 +195,11 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       const next = [...grid];
       next[i] = digit;
       setGrid(next);
+      setMemoMasks((masks) => {
+        const copy = [...masks];
+        copy[i] = 0;
+        return copy;
+      });
       setInputWarning(null);
 
       if (isBoardComplete(next)) {
@@ -174,8 +224,29 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
     const next = [...grid];
     next[i] = 0;
     setGrid(next);
+    setMemoMasks((masks) => {
+      const copy = [...masks];
+      copy[i] = 0;
+      return copy;
+    });
     setInputWarning(null);
   }, [phase, selectedIndex, cellReadOnly, grid]);
+
+  const toggleMemoAtSelection = useCallback(
+    (digit: number) => {
+      if (phase !== "playing") return;
+      if (digit < 1 || digit > 9) return;
+      if (selectedIndex === null || cellReadOnly[selectedIndex]) return;
+      const i = selectedIndex;
+      if (grid[i] !== 0) return;
+      setMemoMasks((masks) => {
+        const next = [...masks];
+        next[i] ^= 1 << (digit - 1);
+        return next;
+      });
+    },
+    [phase, selectedIndex, cellReadOnly, grid],
+  );
 
   useEffect(() => {
     if (inputWarning === null) return;
@@ -186,17 +257,24 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
   useEffect(() => {
     if (phase !== "playing") return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key >= "1" && e.key <= "9") {
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+
+      const digit = digitFromKeyboardEvent(e);
+      if (digit !== null) {
         e.preventDefault();
-        applyDigit(Number(e.key));
-      } else if (e.key === "Backspace" || e.key === "Delete") {
+        if (e.shiftKey) toggleMemoAtSelection(digit);
+        else applyDigit(digit);
+        return;
+      }
+
+      if (e.key === "Backspace" || e.key === "Delete") {
         e.preventDefault();
         clearCell();
       }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [phase, applyDigit, clearCell]);
+  }, [phase, applyDigit, clearCell, toggleMemoAtSelection]);
 
   if (phase === "result") {
     return (
@@ -277,6 +355,8 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
           {grid.map((value, i) => {
             const readOnly = cellReadOnly[i];
             const h = cellHighlights(i, selectedIndex, grid);
+            const mask = memoMasks[i];
+            const showMemo = value === 0 && mask !== 0;
             return (
               <button
                 key={i}
@@ -284,38 +364,65 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
                 onClick={() => setSelectedIndex(i)}
                 aria-current={h.selected ? "true" : undefined}
                 className={[
-                  "flex h-9 w-9 items-center justify-center text-base font-medium sm:h-10 sm:w-10 sm:text-lg",
+                  "flex h-9 w-9 font-medium sm:h-10 sm:w-10",
+                  showMemo
+                    ? "items-stretch p-0"
+                    : "items-center justify-center p-0",
+                  !showMemo && value !== 0 ? "text-base sm:text-lg" : "",
                   cellBorderClasses(i),
                   cellSurfaceClasses(readOnly, h),
                 ].join(" ")}
               >
-                {value === 0 ? "" : value}
+                {showMemo ? (
+                  <CellMemoMarks mask={mask} />
+                ) : value === 0 ? (
+                  ""
+                ) : (
+                  value
+                )}
               </button>
             );
           })}
         </div>
       </div>
 
-      <div className="mt-6 flex flex-wrap gap-2">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => {
-          const done = digitComplete[n];
-          return (
-            <button
-              key={n}
-              type="button"
-              disabled={done}
-              onClick={() => applyDigit(n)}
-              className={[
-                "h-10 w-10 rounded-md border text-sm font-medium",
-                done
-                  ? "pointer-events-none cursor-default border-transparent bg-transparent text-transparent opacity-0"
-                  : "border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50",
-              ].join(" ")}
-            >
-              {n}
-            </button>
-          );
-        })}
+      <div className="mt-6 flex flex-col gap-3">
+        <div className="flex flex-wrap gap-2">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => {
+            const done = digitComplete[n];
+            return (
+              <button
+                key={n}
+                type="button"
+                disabled={done}
+                onClick={() => applyDigit(n)}
+                className={[
+                  "h-10 w-10 rounded-md border text-sm font-medium",
+                  done
+                    ? "pointer-events-none cursor-default border-transparent bg-transparent text-transparent opacity-0"
+                    : "border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50",
+                ].join(" ")}
+              >
+                {n}
+              </button>
+            );
+          })}
+        </div>
+        <div>
+          <p className="mb-1.5 text-xs font-medium text-zinc-500">メモ</p>
+          <div className="flex flex-wrap gap-2">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => toggleMemoAtSelection(n)}
+                className="h-10 w-10 rounded-md border border-amber-300 bg-amber-50/80 text-sm font-medium text-amber-950 hover:bg-amber-100"
+              >
+                {n}
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
     </main>
   );
