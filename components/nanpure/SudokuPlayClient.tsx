@@ -108,9 +108,7 @@ function CellMemoMarks({
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => {
           const visible = memoMaskHas(mask, d);
           const digitHighlight =
-            visible &&
-            highlightDigit !== null &&
-            d === highlightDigit;
+            visible && highlightDigit !== null && d === highlightDigit;
           return (
             <span
               key={d}
@@ -391,7 +389,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       </div>
 
       <div className="mt-6 flex flex-col gap-3">
-        <div className="flex flex-wrap gap-2">
+        <div className="flex w-full max-w-full flex-nowrap items-stretch gap-0.5 sm:gap-1">
           {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => {
             const done = digitComplete[n];
             return (
@@ -401,10 +399,10 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
                 disabled={done}
                 onClick={() => applyDigit(n)}
                 className={[
-                  "h-10 w-10 rounded-md border text-sm font-medium",
+                  "flex min-h-11 min-w-0 flex-1 basis-0 touch-manipulation items-center justify-center rounded-md text-lg font-semibold sm:min-h-12 sm:text-xl",
                   done
-                    ? "pointer-events-none cursor-default border-transparent bg-transparent text-transparent opacity-0"
-                    : "border-zinc-300 bg-white text-zinc-900 hover:bg-zinc-50",
+                    ? "pointer-events-none invisible"
+                    : "text-zinc-900 active:bg-zinc-100 sm:hover:bg-zinc-50",
                 ].join(" ")}
               >
                 {n}
@@ -412,20 +410,17 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
             );
           })}
         </div>
-        <div>
-          <p className="mb-1.5 text-xs font-medium text-zinc-500">メモ</p>
-          <div className="flex flex-wrap gap-2">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => toggleMemoAtSelection(n)}
-                className="h-10 w-10 rounded-md border border-amber-300 bg-amber-50/80 text-sm font-medium text-amber-950 hover:bg-amber-100"
-              >
-                {n}
-              </button>
-            ))}
-          </div>
+        <div className="flex w-full max-w-full flex-nowrap items-stretch gap-0.5 sm:gap-1">
+          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+            <button
+              key={n}
+              type="button"
+              onClick={() => toggleMemoAtSelection(n)}
+              className="flex min-h-11 min-w-0 flex-1 basis-0 touch-manipulation items-center justify-center rounded-md text-lg font-semibold text-zinc-500 active:bg-zinc-100 sm:min-h-12 sm:text-xl sm:hover:bg-zinc-50"
+            >
+              {n}
+            </button>
+          ))}
         </div>
       </div>
     </main>
