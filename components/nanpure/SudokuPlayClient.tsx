@@ -94,20 +94,38 @@ function digitFromKeyboardEvent(e: KeyboardEvent): number | null {
   return null;
 }
 
-function CellMemoMarks({ mask }: { mask: number }) {
+function CellMemoMarks({
+  mask,
+  highlightDigit,
+}: {
+  mask: number;
+  /** 選択中マスに 1〜9 があるとき、その数字に一致するメモ桁を太字にする */
+  highlightDigit: number | null;
+}) {
   return (
     <span className="pointer-events-none flex h-full min-h-0 w-full items-center justify-center px-0.5 py-0.5">
-      <span className="grid aspect-square h-full w-full max-h-full max-w-full grid-cols-3 grid-rows-3 place-items-center text-[0.58rem] font-semibold leading-none text-zinc-700 sm:text-[0.68rem]">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => (
-          <span
-            key={d}
-            className={
-              memoMaskHas(mask, d) ? "tabular-nums" : "invisible tabular-nums"
-            }
-          >
-            {d}
-          </span>
-        ))}
+      <span className="grid aspect-square h-full w-full max-h-full max-w-full grid-cols-3 grid-rows-3 place-items-center text-[0.58rem] leading-none sm:text-[0.68rem]">
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => {
+          const visible = memoMaskHas(mask, d);
+          const digitHighlight =
+            visible &&
+            highlightDigit !== null &&
+            d === highlightDigit;
+          return (
+            <span
+              key={d}
+              className={
+                visible
+                  ? digitHighlight
+                    ? "font-extrabold tabular-nums text-zinc-900"
+                    : "font-medium tabular-nums text-zinc-700"
+                  : "invisible tabular-nums"
+              }
+            >
+              {d}
+            </span>
+          );
+        })}
       </span>
     </span>
   );
@@ -146,6 +164,13 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
   const [won, setWon] = useState<boolean | null>(null);
 
   const gridValues = useMemo(() => [...board.values()], [board]);
+
+  /** 選択マスに確定数字があるとき、盤上のメモで同じ数字を強調する */
+  const memoHighlightDigit = useMemo(() => {
+    if (selectedIndex === null) return null;
+    const v = gridValues[selectedIndex];
+    return v >= 1 && v <= 9 ? v : null;
+  }, [selectedIndex, gridValues]);
 
   /** ヒントマス、またはユーザーが入れた数字がそのマスの正解と一致しているマスは編集不可 */
   const cellReadOnly = useMemo(
@@ -350,7 +375,10 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
                 ].join(" ")}
               >
                 {showMemo ? (
-                  <CellMemoMarks mask={mask} />
+                  <CellMemoMarks
+                    mask={mask}
+                    highlightDigit={memoHighlightDigit}
+                  />
                 ) : value === 0 ? (
                   ""
                 ) : (
