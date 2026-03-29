@@ -1,4 +1,4 @@
-import { SUDOKU_CELLS } from "@/lib/validates/grid";
+import { SUDOKU_CELLS, sudokuPeerIndices } from "@/lib/validates/grid";
 
 /**
  * 1 マス分の状態。確定数字とメモ（候補ビットマスク）をひとまとめにする。
@@ -43,9 +43,25 @@ export class SudokuGrid {
     return new SudokuGrid(this.cells.map((c, i) => (i === index ? next : c)));
   }
 
-  /** 正解として数字を入れたとき: 確定し、メモを消す */
+  /**
+   * 正解として数字を入れたとき: 確定し、そのマスのメモを消す。
+   * さらに同じ行・列・3×3 ブロック内の他マスから、入力した数字に対応するメモだけを消す。
+   */
   placeDigit(index: number, digit: number): SudokuGrid {
-    return this.withCell(index, { value: digit, memoMask: 0 });
+    if (digit < 1 || digit > 9) {
+      return this.withCell(index, { value: digit, memoMask: 0 });
+    }
+    const bit = 1 << (digit - 1);
+    const memoClearMask = 0x1ff & ~bit;
+    const peers = sudokuPeerIndices(index);
+    const nextCells = this.cells.slice();
+    nextCells[index] = { value: digit, memoMask: 0 };
+    for (const j of peers) {
+      if (j === index) continue;
+      const c = nextCells[j];
+      nextCells[j] = { ...c, memoMask: c.memoMask & memoClearMask };
+    }
+    return new SudokuGrid(nextCells);
   }
 
   /**

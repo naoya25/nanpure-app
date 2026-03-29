@@ -1,5 +1,28 @@
 export const SUDOKU_CELLS = 81;
 
+/**
+ * マス `index` と同じ行・列・3×3 ブロックに属する全マスのインデックス（自身を含む）。
+ * メモの自動削除など、ユニット単位の走査に使う。
+ */
+export function sudokuPeerIndices(index: number): readonly number[] {
+  if (!Number.isInteger(index) || index < 0 || index >= SUDOKU_CELLS) {
+    throw new RangeError(`cell index out of range: ${index}`);
+  }
+  const row = Math.floor(index / 9);
+  const col = index % 9;
+  const seen = new Set<number>();
+  for (let c = 0; c < 9; c++) seen.add(row * 9 + c);
+  for (let r = 0; r < 9; r++) seen.add(r * 9 + col);
+  const br = Math.floor(row / 3) * 3;
+  const bc = Math.floor(col / 3) * 3;
+  for (let dr = 0; dr < 3; dr++) {
+    for (let dc = 0; dc < 3; dc++) {
+      seen.add((br + dr) * 9 + (bc + dc));
+    }
+  }
+  return [...seen];
+}
+
 export type ParsedPuzzle = {
   /** 各マス 0〜9（0 は空） */
   values: number[];
