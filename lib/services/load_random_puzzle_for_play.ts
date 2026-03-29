@@ -14,23 +14,19 @@ const RETRY_MESSAGE =
 
 /**
  * プレイ用にランダム 1 問を用意するユースケース。
- * repository の Result をユーザー向けの分岐に変換し、想定外の例外は try-catch で拾って retry 扱いにまとめる（ログは呼び出し側で足してよい）。
+ * repository はエラー時に throw するため、ここで try-catch して UI 向け outcome に丸める。
  */
 export async function loadRandomPuzzleForPlay(
   supabase: SupabaseClient,
 ): Promise<LoadRandomPuzzleForPlayResult> {
   try {
-    const result = await get_random_puzzle(supabase);
+    const puzzle = await get_random_puzzle(supabase);
 
-    if (!result.ok) {
-      return { outcome: "retry", userMessage: RETRY_MESSAGE };
-    }
-
-    if (!result.puzzle) {
+    if (puzzle === null) {
       return { outcome: "no_data" };
     }
 
-    return { outcome: "ok", puzzle: result.puzzle };
+    return { outcome: "ok", puzzle };
   } catch {
     return { outcome: "retry", userMessage: RETRY_MESSAGE };
   }
