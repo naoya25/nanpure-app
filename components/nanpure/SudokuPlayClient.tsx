@@ -18,10 +18,6 @@ export type SudokuPlayPuzzle = {
   difficulty_id: number;
 };
 
-function emptyWrongFlags(): boolean[] {
-  return Array.from({ length: 81 }, () => false);
-}
-
 function cellBorderClasses(index: number): string {
   const row = Math.floor(index / 9);
   const col = index % 9;
@@ -43,6 +39,62 @@ function cellBorderClasses(index: number): string {
   return parts.join(" ");
 }
 
+type CellHighlight = {
+  selected: boolean;
+  /** 選択中マスに 1〜9 が入っているとき、同じ数字のマス */
+  digitMatch: boolean;
+  /** 選択マスと同じ行・列・3×3 ブロック */
+  inBand: boolean;
+};
+
+function cellHighlights(
+  index: number,
+  selectedIndex: number | null,
+  grid: readonly number[],
+): CellHighlight {
+  if (selectedIndex === null) {
+    return { selected: false, digitMatch: false, inBand: false };
+  }
+  const sr = Math.floor(selectedIndex / 9);
+  const sc = selectedIndex % 9;
+  const ri = Math.floor(index / 9);
+  const ci = index % 9;
+  const selected = index === selectedIndex;
+  const inBand =
+    ri === sr ||
+    ci === sc ||
+    (Math.floor(ri / 3) === Math.floor(sr / 3) &&
+      Math.floor(ci / 3) === Math.floor(sc / 3));
+  const sv = grid[selectedIndex];
+  const digitMatch =
+    sv >= 1 && sv <= 9 && grid[index] === sv && !selected;
+  const inBandOnly = inBand && !selected;
+  return {
+    selected,
+    digitMatch,
+    inBand: inBandOnly,
+  };
+}
+
+function cellSurfaceClasses(readOnly: boolean, h: CellHighlight): string {
+  if (h.selected) {
+    return "relative z-10 bg-sky-200 ring-2 ring-inset ring-blue-600";
+  }
+  if (h.digitMatch) {
+    return readOnly
+      ? "bg-sky-200 text-zinc-900"
+      : "bg-sky-100 text-zinc-900 hover:bg-sky-200";
+  }
+  if (h.inBand) {
+    return readOnly
+      ? "bg-sky-100 text-zinc-900"
+      : "bg-sky-50 text-zinc-900 hover:bg-sky-100";
+  }
+  return readOnly
+    ? "cursor-default bg-zinc-100 text-zinc-900"
+    : "cursor-pointer bg-white text-zinc-900 hover:bg-zinc-50";
+}
+
 export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
   const { values: seedValues, fixed } = useMemo(
     () => parsePuzzle81(puzzle.puzzle_81),
@@ -52,51 +104,60 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
   const [grid, setGrid] = useState<number[]>(() => [...seedValues]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [mistakes, setMistakes] = useState(0);
-  const [wrongHighlight, setWrongHighlight] =
-    useState<boolean[]>(emptyWrongFlags);
+  const [inputWarning, setInputWarning] = useState<string | null>(null);
   const [phase, setPhase] = useState<"playing" | "result">("playing");
   const [won, setWon] = useState<boolean | null>(null);
+
+  /** ヒントマス、またはユーザーが入れた数字がそのマスの正解と一致しているマスは編集不可 */
+  const cellReadOnly = useMemo(
+    () =>
+      grid.map((v, i) => {
+        if (fixed[i]) return true;
+        return v >= 1 && v <= 9 && String(v) === puzzle.solution_81[i];
+      }),
+    [grid, fixed, puzzle.solution_81],
+  );
 
   const applyDigit = useCallback(
     (digit: number) => {
       if (phase !== "playing") return;
-      if (selectedIndex === null || fixed[selectedIndex]) return;
+      if (selectedIndex === null || cellReadOnly[selectedIndex]) return;
       const i = selectedIndex;
-      const next = [...grid];
-      next[i] = digit;
       const correct = isDigitCorrectForSolution(digit, puzzle.solution_81, i);
 
-      setGrid(next);
-      setWrongHighlight((wh) => {
-        const n = [...wh];
-        n[i] = !correct;
-        return n;
-      });
       if (!correct) {
+        const next = [...grid];
+        next[i] = 0;
+        setGrid(next);
         setMistakes((m) => m + 1);
+        setInputWarning(
+          `「${digit}」はこのマスでは正しくありません。別の数字を試してください。`,
+        );
+        return;
       }
+
+      const next = [...grid];
+      next[i] = digit;
+      setGrid(next);
+      setInputWarning(null);
 
       if (isBoardComplete(next)) {
         setPhase("result");
         setWon(isBoardMatchingSolution(next, puzzle.solution_81));
       }
     },
-    [phase, selectedIndex, fixed, grid, puzzle.solution_81],
+    [phase, selectedIndex, cellReadOnly, grid, puzzle.solution_81],
   );
 
   const clearCell = useCallback(() => {
     if (phase !== "playing") return;
-    if (selectedIndex === null || fixed[selectedIndex]) return;
+    if (selectedIndex === null || cellReadOnly[selectedIndex]) return;
     const i = selectedIndex;
     const next = [...grid];
     next[i] = 0;
     setGrid(next);
-    setWrongHighlight((wh) => {
-      const n = [...wh];
-      n[i] = false;
-      return n;
-    });
-  }, [phase, selectedIndex, fixed, grid]);
+    setInputWarning(null);
+  }, [phase, selectedIndex, cellReadOnly, grid]);
 
   useEffect(() => {
     if (phase !== "playing") return;
@@ -148,6 +209,15 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
 
   return (
     <main className="mx-auto max-w-lg px-4 py-8">
+      {inputWarning ? (
+        <div
+          role="alert"
+          className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900"
+        >
+          {inputWarning}
+        </div>
+      ) : null}
+
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-zinc-900">ナンプレ</h1>
@@ -180,28 +250,19 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       <div className="inline-block rounded-lg border-2 border-zinc-700 bg-white p-0.5 shadow-sm">
         <div className="grid grid-cols-9">
           {grid.map((value, i) => {
-            const isFixed = fixed[i];
-            const selected = selectedIndex === i;
-            const wrong = wrongHighlight[i];
+            const readOnly = cellReadOnly[i];
+            const h = cellHighlights(i, selectedIndex, grid);
             return (
               <button
                 key={i}
                 type="button"
-                disabled={isFixed}
                 onClick={() => setSelectedIndex(i)}
+                aria-current={h.selected ? "true" : undefined}
                 className={[
                   "flex h-9 w-9 items-center justify-center text-base font-medium sm:h-10 sm:w-10 sm:text-lg",
                   cellBorderClasses(i),
-                  isFixed
-                    ? "cursor-default bg-zinc-100 text-zinc-900"
-                    : "cursor-pointer bg-white text-zinc-900 hover:bg-zinc-50",
-                  selected
-                    ? "relative z-10 ring-2 ring-inset ring-blue-600"
-                    : "",
-                  wrong ? "bg-red-50 text-red-800" : "",
-                ]
-                  .filter(Boolean)
-                  .join(" ")}
+                  cellSurfaceClasses(readOnly, h),
+                ].join(" ")}
               >
                 {value === 0 ? "" : value}
               </button>
@@ -211,7 +272,9 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       </div>
 
       <p className="mt-3 text-xs text-zinc-500">
-        マスを選んでから 1〜9 を入力（キーボード可）。消すは Delete / ボタン。
+        マスを選ぶと、その行・列・3×3
+        ブロックと同じ数字が薄く色付きます。確定したマスも選べますが上書きはできません。1〜9
+        はキーボード可。消すは Delete / ボタン。
       </p>
 
       <div className="mt-6 flex flex-wrap gap-2">
