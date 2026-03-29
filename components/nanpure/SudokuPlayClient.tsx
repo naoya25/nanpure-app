@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { SudokuGrid } from "@/lib/nanpure/sudoku_grid";
+import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import { parsePuzzle81 } from "@/lib/validates/grid";
 import {
   isBoardComplete,

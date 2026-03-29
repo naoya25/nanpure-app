@@ -11,6 +11,7 @@ export type SudokuCell = Readonly<{
 
 /**
  * プレイ中盤面（81 マス）。更新はすべて新インスタンスを返す（React state 向け）。
+ * DB の `puzzle_81` や `parsePuzzle81` の `values[]` とは別層の「UI 用の集約モデル」。
  */
 export class SudokuGrid {
   private constructor(private readonly cells: readonly SudokuCell[]) {
