@@ -1,10 +1,5 @@
 import { SUDOKU_CELLS } from "@/lib/validates/grid";
 
-/**
- * `sample/sudoku-solution.py` のアルゴリズムを TypeScript に移植したもの。
- * 盤は 81 文字の文字列（`'0'` = 空、`'1'`〜`'9'` = ヒント／確定）。
- */
-
 const DIGITS = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
 
 function countZeros(s: string): number {
@@ -64,7 +59,6 @@ function hasDuplicateDigit1To9(cells: readonly string[]): boolean {
 
 /**
  * 盤全体について、行・列・3×3 それぞれで 1〜9 の重複がないか（`0` は複数可）。
- * Python: `check_all`
  */
 export function sudokuCheckAll(puzzle81: string): boolean {
   if (puzzle81.length !== SUDOKU_CELLS) return false;
@@ -89,14 +83,12 @@ export function sudokuCheckAll(puzzle81: string): boolean {
 
 export type FindNextResult = {
   index: number;
-  /** 置いてよい候補（`'1'`〜`'9'`）。Python の `set` と同順序は保証しない */
   options: string[];
 };
 
 /**
  * 空マスのうち、行・列・ブロックに既に現れる数字が最も多いマスを選び、
  * そこに入れうる数字の集合を返す。
- * Python: `find_next`
  */
 export function sudokuFindNext(puzzle81: string): FindNextResult | null {
   if (puzzle81.length !== SUDOKU_CELLS) return null;
@@ -127,7 +119,6 @@ export function sudokuFindNext(puzzle81: string): FindNextResult | null {
 
 /**
  * 深さ優先（スタック）で解を列挙する。`maxSolutions` 件たまったら打ち切り。
- * Python: `main` 内の `while stack` ループと同じ分岐。
  *
  * @returns 完成盤の文字列（`'1'`〜`'9'` のみ）の配列
  */
