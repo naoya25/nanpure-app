@@ -38,8 +38,9 @@ function sortByTechniqueOrder(
 }
 
 /**
- * 選択したテクニックだけを難易度順（易→難）で繰り返し適用し、
- * 1 周しても変化がなければ終了と判定する。
+ * 選択したテクニックだけを難易度順（易→難）で繰り返し適用する。
+ * あるテクニックで 1 手入ったら **先頭のテクニックに戻る**。
+ * 先頭から順にすべて「適用なし」となった 1 周が終わったら終了と判定する。
  */
 export function runTechniqueAutoUntilNoChange(
   grid: SudokuGrid,
@@ -54,25 +55,26 @@ export function runTechniqueAutoUntilNoChange(
   let nextGrid = grid;
   const steps: TechniqueAutoRunResult["steps"] = [];
 
-  // 反復上限は安全弁。通常は「1周で変化なし」で終了する。
-  const maxRounds = 81 * 9;
-  for (let round = 0; round < maxRounds; round++) {
-    let changedInRound = false;
+  // 反復上限は安全弁。通常は「易→難を一周して適用なし」で終了する。
+  const maxTryOneTechnique = 81 * 9 * ordered.length;
+  let i = 0;
+  for (let guard = 0; guard < maxTryOneTechnique; guard++) {
+    if (i >= ordered.length) {
+      return { grid: nextGrid, steps, finishedBecauseNoChange: true };
+    }
 
-    for (const techniqueId of ordered) {
-      const result = runTechniqueStep(nextGrid, techniqueId, solution81);
-      if (!result) continue;
-      changedInRound = true;
+    const techniqueId = ordered[i];
+    const result = runTechniqueStep(nextGrid, techniqueId, solution81);
+    if (result) {
       nextGrid = result.grid;
       steps.push({
         techniqueId,
         cellIndex: result.cellIndex,
         grid: result.grid,
       });
-    }
-
-    if (!changedInRound) {
-      return { grid: nextGrid, steps, finishedBecauseNoChange: true };
+      i = 0;
+    } else {
+      i += 1;
     }
   }
 
