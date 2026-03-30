@@ -1,5 +1,6 @@
 import type { SudokuGrid } from "@/lib/models/sudoku_grid";
 import {
+  TechniqueAutoRunResult,
   TechniqueApplyResult,
   TechniqueId,
 } from "@/lib/types/sudoku_technique_types";
@@ -23,4 +24,51 @@ export function runTechniqueStep(
   techniqueId: TechniqueId,
 ): TechniqueApplyResult | null {
   return TRY_BY_ID[techniqueId](grid);
+}
+
+function sortByTechniqueOrder(
+  selectedTechniqueIds: readonly TechniqueId[],
+): TechniqueId[] {
+  const selected = new Set(selectedTechniqueIds);
+  return Object.values(TechniqueId).filter((id) => selected.has(id));
+}
+
+/**
+ * 選択したテクニックだけを難易度順（易→難）で繰り返し適用し、
+ * 1 周しても変化がなければ終了と判定する。
+ */
+export function runTechniqueAutoUntilNoChange(
+  grid: SudokuGrid,
+  selectedTechniqueIds: readonly TechniqueId[],
+): TechniqueAutoRunResult {
+  const ordered = sortByTechniqueOrder(selectedTechniqueIds);
+  if (ordered.length === 0) {
+    return { grid, steps: [], finishedBecauseNoChange: true };
+  }
+
+  let nextGrid = grid;
+  const steps: TechniqueAutoRunResult["steps"] = [];
+
+  // 反復上限は安全弁。通常は「1周で変化なし」で終了する。
+  const maxRounds = 81 * 9;
+  for (let round = 0; round < maxRounds; round++) {
+    let changedInRound = false;
+
+    for (const techniqueId of ordered) {
+      const result = runTechniqueStep(nextGrid, techniqueId);
+      if (!result) continue;
+      changedInRound = true;
+      nextGrid = result.grid;
+      steps.push({
+        techniqueId,
+        cellIndex: result.cellIndex,
+      });
+    }
+
+    if (!changedInRound) {
+      return { grid: nextGrid, steps, finishedBecauseNoChange: true };
+    }
+  }
+
+  return { grid: nextGrid, steps, finishedBecauseNoChange: false };
 }

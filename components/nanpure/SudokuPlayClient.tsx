@@ -8,11 +8,11 @@ import { SudokuBoard } from "@/components/nanpure/SudokuBoard";
 import { PlayHistory } from "@/lib/models/play_history";
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import { runTechniqueStep } from "@/lib/models/sudoku_technique_runner";
-import { parsePuzzle81 } from "@/lib/validates/grid";
 import {
-  TECHNIQUE_BUTTONS,
+  TECHNIQUE_LABELS,
   type TechniqueId,
 } from "@/lib/types/sudoku_technique_types";
+import { parsePuzzle81 } from "@/lib/validates/grid";
 import {
   isBoardComplete,
   isBoardMatchingSolution,
@@ -58,7 +58,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
   const [techniqueHighlightedCells, setTechniqueHighlightedCells] =
     useState<ReadonlySet<number> | null>(null);
 
-  const techniqueButtons = TECHNIQUE_BUTTONS;
+  const techniqueButtons = TECHNIQUE_LABELS;
 
   useEffect(() => {
     historyRef.current = history;

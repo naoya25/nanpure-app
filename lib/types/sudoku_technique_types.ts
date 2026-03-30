@@ -13,7 +13,7 @@ export type TechniqueDescriptor = {
   label: string;
 };
 
-export const TECHNIQUE_BUTTONS = [
+export const TECHNIQUE_LABELS = [
   { id: TechniqueId.FULL_HOUSE, label: "フルハウス" },
   { id: TechniqueId.SINGLE, label: "シングル" },
   { id: TechniqueId.HIDDEN_SINGLE, label: "隠れシングル" },
@@ -36,4 +36,17 @@ export type TechniqueStepResult =
 export type TechniqueApplyResult = {
   cellIndex: number[];
   grid: SudokuGrid;
+};
+
+/** 自動実行で 1 回適用された手のログ */
+export type TechniqueAutoRunStep = {
+  techniqueId: TechniqueId;
+  cellIndex: number[];
+};
+
+/** 自動実行の結果 */
+export type TechniqueAutoRunResult = {
+  grid: SudokuGrid;
+  steps: TechniqueAutoRunStep[];
+  finishedBecauseNoChange: boolean;
 };
