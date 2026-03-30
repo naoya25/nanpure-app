@@ -1,26 +1,4 @@
-import { SUDOKU_CELLS, sudokuPeerIndices } from "@/lib/validates/grid";
-
 export const ALL_CANDIDATE_BITS = 0x1ff;
-
-/**
- * 確定数字だけから、マス `index` の候補ビット（空マス以外は 0）。
- * ピアに現れる 1〜9 は候補から除く。
- */
-export function computeCandidateMaskForCell(
-  values: readonly number[],
-  index: number,
-): number {
-  if (values[index] !== 0 && values[index] !== undefined) return 0;
-  let mask = ALL_CANDIDATE_BITS;
-  for (const p of sudokuPeerIndices(index)) {
-    if (p === index) continue;
-    const v = values[p] ?? 0;
-    if (v >= 1 && v <= 9) {
-      mask &= ALL_CANDIDATE_BITS & ~(1 << (v - 1));
-    }
-  }
-  return mask;
-}
 
 /** 9ビット候補マスクの popcount */
 export function popcount9(mask: number): number {
@@ -29,15 +7,6 @@ export function popcount9(mask: number): number {
     n += 1;
   }
   return n;
-}
-
-/** 全マスのルールベース候補。確定マスは 0。 */
-export function computeCandidateMasks(values: readonly number[]): Uint16Array {
-  const out = new Uint16Array(SUDOKU_CELLS);
-  for (let i = 0; i < SUDOKU_CELLS; i++) {
-    out[i] = values[i] ? 0 : computeCandidateMaskForCell(values, i);
-  }
-  return out;
 }
 
 export function sudokuRowCellIndices(row: number): readonly number[] {

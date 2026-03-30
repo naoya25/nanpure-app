@@ -1,9 +1,5 @@
-import {
-  SUDOKU_CELLS,
-  sudokuPeerIndices,
-} from "@/lib/validates/grid";
+import { SUDOKU_CELLS, sudokuPeerIndices } from "@/lib/validates/grid";
 import { isDigitCorrectForSolution } from "@/lib/validates/validate";
-import { computeCandidateMaskForCell } from "@/lib/algorithms/techniques/helper";
 
 /**
  * 1 マス分の状態。確定数字とメモ（候補ビットマスク）をひとまとめにする。
@@ -143,21 +139,6 @@ export class SudokuGrid {
   }
 
   /**
-   * 論理解法用: 各空マスの memoMask を、確定数字のみから計算した候補で上書きする。
-   * 確定マスの memo は 0。
-   */
-  withLogicCandidatesSyncedFromValues(): SudokuGrid {
-    const values = this.values();
-    return new SudokuGrid(
-      this.cells.map((c, i) =>
-        c.value !== 0
-          ? { value: c.value, memoMask: 0 }
-          : { value: 0, memoMask: computeCandidateMaskForCell(values, i) },
-      ),
-    );
-  }
-
-  /**
    * 論理 1 手の確定（正解文字列なし）。空マスかつ候補に digit が含まれること。
    * 確定後、空マスの memo は「旧 memo ∩ 新ルールベース候補」で引き継ぐ。
    */
@@ -174,10 +155,9 @@ export class SudokuGrid {
     const nextCells = this.cells.map((cell, i) => {
       if (i === index) return { value: digit, memoMask: 0 };
       if (cell.value !== 0) return { value: cell.value, memoMask: 0 };
-      const base = computeCandidateMaskForCell(nextValues, i);
       return {
         value: 0,
-        memoMask: cell.memoMask & base,
+        memoMask: cell.memoMask,
       };
     });
     return new SudokuGrid(nextCells);
