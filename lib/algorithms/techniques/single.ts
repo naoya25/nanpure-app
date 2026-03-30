@@ -2,8 +2,8 @@ import { popcount9 } from "@/lib/algorithms/techniques/helper";
 import type { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
 
-/** 裸のシングル（候補が 1 つだけの空マス）があればその 1 手（先頭のマス 1 のみ） */
-export function tryNakedSingleStep(
+/** シングル（候補が 1 つだけの空マス）があればその 1 手（先頭のマス 1 のみ） */
+export function trySingleStep(
   grid: SudokuGrid,
 ): TechniqueApplyResult | null {
   const values = grid.values();

@@ -1,7 +1,7 @@
 import type { SudokuGrid } from "@/lib/models/sudoku_grid";
 
 /** 難易度の低い順チェーン（適用順）のためのテクニック ID */
-export type TechniqueId = "fullHouse" | "nakedSingle" | "hiddenSingle";
+export type TechniqueId = "fullHouse" | "single" | "hiddenSingle";
 
 export type TechniqueStepResult =
   | {

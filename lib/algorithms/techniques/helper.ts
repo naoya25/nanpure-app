@@ -1,6 +1,6 @@
 export const ALL_CANDIDATE_BITS = 0x1ff;
 
-/** 9ビット候補マスクの popcount */
+/** 9ビット候補マスクの 空マスの数 */
 export function popcount9(mask: number): number {
   let n = 0;
   for (let m = mask & 0x1ff; m !== 0; m &= m - 1) {
