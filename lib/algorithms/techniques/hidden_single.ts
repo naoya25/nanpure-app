@@ -1,10 +1,12 @@
 import {
+  ALL_CANDIDATE_BITS,
   sudokuBlockCellIndices,
   sudokuColCellIndices,
   sudokuRowCellIndices,
 } from "@/lib/algorithms/techniques/helper";
 
 import type { SudokuGrid } from "@/lib/models/sudoku_grid";
+import { sudokuPeerIndices } from "@/lib/validates/grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
 
 function tryUnit(
@@ -45,8 +47,23 @@ export function tryHiddenSingleStep(
   while (true) {
     let didChange = false;
 
-    // `nextGrid` を都度参照するので、割り当てによる memoMask 更新が反映される。
-    const getMask = (cellIndex: number) => nextGrid.cellAt(cellIndex).memoMask;
+    // `nextGrid` / `values` を都度参照し、memo がなくても盤面制約だけで候補を導出する。
+    const getMask = (cellIndex: number) => {
+      if (values[cellIndex] !== 0) return 0;
+
+      let usedMask = 0;
+      for (const j of sudokuPeerIndices(cellIndex)) {
+        if (j === cellIndex) continue;
+        const v = values[j] ?? 0;
+        if (v === 0) continue;
+        usedMask |= 1 << (v - 1);
+      }
+
+      let candidateMask = ALL_CANDIDATE_BITS & ~usedMask;
+      const memoMask = nextGrid.cellAt(cellIndex).memoMask;
+      if (memoMask !== 0) candidateMask &= memoMask;
+      return candidateMask;
+    };
 
     for (let r = 0; r < 9; r++) {
       const hit = tryUnit(values, getMask, sudokuRowCellIndices(r));

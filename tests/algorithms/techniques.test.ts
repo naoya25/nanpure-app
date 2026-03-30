@@ -33,6 +33,7 @@ describe("algorithms/techniques", () => {
       // TODO: 候補ビットマスクも検証する
       const out = res!.grid;
       const outValues = out.values();
+      console.log(outValues);
       const expectedValues = parsePuzzle81(c.expected).values;
       expect(outValues).toEqual(expectedValues);
     }
