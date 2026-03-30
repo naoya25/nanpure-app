@@ -23,7 +23,7 @@ export const TECHNIQUE_LABELS = [
   { id: TechniqueId.HIDDEN_SINGLE, label: "隠れシングル" },
   { id: TechniqueId.SOLUTION_SYNC, label: "正解同期" },
   { id: TechniqueId.PENCIL_MARK, label: "ペンシルマーク" },
-  { id: TechniqueId.MEMO_SINGLE, label: "メモ1候補の確定" },
+  { id: TechniqueId.MEMO_SINGLE, label: "メモ1確定" },
   { id: TechniqueId.POINTING, label: "ポインティング" },
   { id: TechniqueId.BOX_LINE_REDUCTION, label: "ボックス・ライン削減" },
 ] as const satisfies readonly TechniqueDescriptor[];
