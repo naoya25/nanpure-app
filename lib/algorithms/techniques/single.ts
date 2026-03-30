@@ -1,11 +1,13 @@
-import { popcount9 } from "@/lib/algorithms/techniques/helper";
+import {
+  ALL_CANDIDATE_BITS,
+  popcount9,
+} from "@/lib/algorithms/techniques/helper";
 import type { SudokuGrid } from "@/lib/models/sudoku_grid";
+import { sudokuPeerIndices } from "@/lib/validates/grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
 
 /** シングル（候補が 1 つだけの空マス）があればその 1 手（先頭のマス 1 のみ） */
-export function trySingleStep(
-  grid: SudokuGrid,
-): TechniqueApplyResult | null {
+export function trySingleStep(grid: SudokuGrid): TechniqueApplyResult | null {
   // 見つかったシングルを 1 回だけで終わらせず、
   // 候補更新によって新たにシングルが生まれなくなるまで適用してから返す。
   let nextGrid = grid;
@@ -18,13 +20,27 @@ export function trySingleStep(
     for (let i = 0; i < 81; i++) {
       if (values[i] !== 0) continue;
 
-      const m = nextGrid.cellAt(i).memoMask;
-      if (popcount9(m) !== 1) continue;
+      // 「ピアに存在する数字」が確定に十分ならその数字を確定する。
+      // candidates は「ピアに出ていない数字集合」。
+      let usedMask = 0;
+      for (const j of sudokuPeerIndices(i)) {
+        if (j === i) continue;
+        const v = values[j] ?? 0;
+        if (v === 0) continue;
+        usedMask |= 1 << (v - 1);
+      }
 
-      // `memoMask` が 1-bit なので、そのビットに対応する数字へ変換する。
+      // もし memo が存在しているなら、矛盾しないように候補集合を交差させる。
+      let candidateMask = ALL_CANDIDATE_BITS & ~usedMask;
+      const memoMask = nextGrid.cellAt(i).memoMask;
+      if (memoMask !== 0) candidateMask &= memoMask;
+
+      if (popcount9(candidateMask) !== 1) continue;
+
+      // `candidateMask` が 1-bit なので、そのビットに対応する数字へ変換する。
       let digit = 0;
       for (let d = 1; d <= 9; d++) {
-        if (m & (1 << (d - 1))) {
+        if (candidateMask & (1 << (d - 1))) {
           digit = d;
           break;
         }
