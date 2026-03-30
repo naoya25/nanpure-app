@@ -41,6 +41,7 @@ function tryUnit(
 /** フルハウス（ラストセル）が 1 つあればその 1 手。なければ null */
 export function tryFullHouseStep(
   grid: SudokuGrid,
+  solution81?: string,
 ): TechniqueApplyResult | null {
   // 1周だけ走査し、元の盤だけを見て手を収集してから最後に一括適用する。
   const values = [...grid.values()];
@@ -78,7 +79,7 @@ export function tryFullHouseStep(
   const changedCells: number[] = [];
   for (const [cellIndex, digit] of opsByCell) {
     const before = nextGrid;
-    nextGrid = nextGrid.placeDigit(cellIndex, digit).next;
+    nextGrid = nextGrid.placeDigit(cellIndex, digit, solution81).next;
     if (nextGrid !== before) {
       changedCells.push(cellIndex);
     }

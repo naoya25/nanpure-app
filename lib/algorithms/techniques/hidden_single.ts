@@ -37,6 +37,7 @@ function tryUnit(
 /** 隠れシングル。ユニット内で某数字の候補が 1 マスだけならその確定（先頭のパターン 1 のみ） */
 export function tryHiddenSingleStep(
   grid: SudokuGrid,
+  solution81?: string,
 ): TechniqueApplyResult | null {
   // 1周だけ走査し、元の盤だけを見て手を収集してから最後に一括適用する。
   const values = [...grid.values()];
@@ -95,7 +96,7 @@ export function tryHiddenSingleStep(
   const changedCells: number[] = [];
   for (const [cellIndex, digit] of opsByCell) {
     const before = nextGrid;
-    nextGrid = nextGrid.placeDigit(cellIndex, digit).next;
+    nextGrid = nextGrid.placeDigit(cellIndex, digit, solution81).next;
     if (nextGrid !== before) {
       changedCells.push(cellIndex);
     }

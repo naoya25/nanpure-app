@@ -138,7 +138,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       const h = historyRef.current;
       const grid = h.present;
 
-      const result = runTechniqueStep(grid, techniqueId);
+      const result = runTechniqueStep(grid, techniqueId, puzzle.solution_81);
 
       if (!result) return;
 
@@ -189,6 +189,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
     const { grid: nextGrid, steps } = runTechniqueAutoUntilNoChange(
       h.present,
       ids,
+      puzzle.solution_81,
     );
 
     if (steps.length === 0) {

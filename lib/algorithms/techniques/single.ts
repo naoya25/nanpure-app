@@ -7,7 +7,10 @@ import { sudokuPeerIndices } from "@/lib/validates/grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
 
 /** シングル（候補が 1 つだけの空マス）があればその 1 手（先頭のマス 1 のみ） */
-export function trySingleStep(grid: SudokuGrid): TechniqueApplyResult | null {
+export function trySingleStep(
+  grid: SudokuGrid,
+  solution81?: string,
+): TechniqueApplyResult | null {
   // 1周だけ走査し、元の盤だけを見て手を収集してから最後に一括適用する。
   const values = [...grid.values()];
   const opsByCell = new Map<number, number>();
@@ -52,7 +55,7 @@ export function trySingleStep(grid: SudokuGrid): TechniqueApplyResult | null {
   const changedCells: number[] = [];
   for (const [cellIndex, digit] of opsByCell) {
     const before = nextGrid;
-    nextGrid = nextGrid.placeDigit(cellIndex, digit).next;
+    nextGrid = nextGrid.placeDigit(cellIndex, digit, solution81).next;
     if (nextGrid !== before) {
       changedCells.push(cellIndex);
     }

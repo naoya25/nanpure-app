@@ -10,20 +10,24 @@ import { tryHiddenSingleStep } from "@/lib/algorithms/techniques/hidden_single";
 import { trySingleStep } from "@/lib/algorithms/techniques/single";
 import { tryPencilMarkStep } from "@/lib/algorithms/techniques/pencil_mark";
 
-type TryTechnique = (grid: SudokuGrid) => TechniqueApplyResult | null;
+type TryTechnique = (
+  grid: SudokuGrid,
+  solution81?: string,
+) => TechniqueApplyResult | null;
 
 const TRY_BY_ID: Record<TechniqueId, TryTechnique> = {
   [TechniqueId.FULL_HOUSE]: tryFullHouseStep,
   [TechniqueId.SINGLE]: trySingleStep,
   [TechniqueId.HIDDEN_SINGLE]: tryHiddenSingleStep,
-  [TechniqueId.PENCIL_MARK]: tryPencilMarkStep,
+  [TechniqueId.PENCIL_MARK]: (grid) => tryPencilMarkStep(grid),
 };
 
 export function runTechniqueStep(
   grid: SudokuGrid,
   techniqueId: TechniqueId,
+  solution81?: string,
 ): TechniqueApplyResult | null {
-  return TRY_BY_ID[techniqueId](grid);
+  return TRY_BY_ID[techniqueId](grid, solution81);
 }
 
 function sortByTechniqueOrder(
@@ -40,6 +44,7 @@ function sortByTechniqueOrder(
 export function runTechniqueAutoUntilNoChange(
   grid: SudokuGrid,
   selectedTechniqueIds: readonly TechniqueId[],
+  solution81?: string,
 ): TechniqueAutoRunResult {
   const ordered = sortByTechniqueOrder(selectedTechniqueIds);
   if (ordered.length === 0) {
@@ -55,7 +60,7 @@ export function runTechniqueAutoUntilNoChange(
     let changedInRound = false;
 
     for (const techniqueId of ordered) {
-      const result = runTechniqueStep(nextGrid, techniqueId);
+      const result = runTechniqueStep(nextGrid, techniqueId, solution81);
       if (!result) continue;
       changedInRound = true;
       nextGrid = result.grid;
