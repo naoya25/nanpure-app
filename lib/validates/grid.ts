@@ -35,7 +35,9 @@ export type ParsedPuzzle = {
  */
 export function parsePuzzle81(puzzle81: string): ParsedPuzzle {
   if (puzzle81.length !== SUDOKU_CELLS) {
-    throw new Error(`puzzle_81 must be ${SUDOKU_CELLS} chars, got ${puzzle81.length}`);
+    throw new Error(
+      `puzzle_81 must be ${SUDOKU_CELLS} chars, got ${puzzle81.length}`,
+    );
   }
   const values = [...puzzle81].map((ch) => {
     const n = parseInt(ch, 10);

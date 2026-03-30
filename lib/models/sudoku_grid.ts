@@ -1,5 +1,9 @@
-import { SUDOKU_CELLS, sudokuPeerIndices } from "@/lib/validates/grid";
+import {
+  SUDOKU_CELLS,
+  sudokuPeerIndices,
+} from "@/lib/validates/grid";
 import { isDigitCorrectForSolution } from "@/lib/validates/validate";
+import { computeCandidateMaskForCell } from "@/lib/algorithms/techniques/helper";
 
 /**
  * 1 マス分の状態。確定数字とメモ（候補ビットマスク）をひとまとめにする。
@@ -28,6 +32,29 @@ export class SudokuGrid {
         value: values[i] ?? 0,
         memoMask: 0,
       })),
+    );
+  }
+
+  /**
+   * 確定値と空マスの論理候補をまとめて指定（テスト・再現用）。
+   * 確定マスの `candidateMasks` は無視され memo は 0 になる。
+   */
+  static fromValuesAndCandidateMasks(
+    values: readonly number[],
+    candidateMasks: readonly number[],
+  ): SudokuGrid {
+    if (candidateMasks.length !== SUDOKU_CELLS) {
+      throw new Error(
+        `fromValuesAndCandidateMasks: expected ${SUDOKU_CELLS} masks`,
+      );
+    }
+    return new SudokuGrid(
+      Array.from({ length: SUDOKU_CELLS }, (_, i) => {
+        const v = values[i] ?? 0;
+        return v !== 0
+          ? { value: v, memoMask: 0 }
+          : { value: 0, memoMask: candidateMasks[i]! & 0x1ff };
+      }),
     );
   }
 
@@ -61,11 +88,7 @@ export class SudokuGrid {
         `SudokuGrid.placeDigit: solution81 must be ${SUDOKU_CELLS} chars`,
       );
     }
-    const matchesSolution = isDigitCorrectForSolution(
-      digit,
-      solution81,
-      index,
-    );
+    const matchesSolution = isDigitCorrectForSolution(digit, solution81, index);
     const next = matchesSolution
       ? this.withPeerMemoClearedForDigit(index, digit)
       : this.withSingleCellDigit(index, digit);
@@ -80,7 +103,10 @@ export class SudokuGrid {
   /**
    * 正解と一致する配置: 当該マスを確定し、ピアから入力数字に対応するメモだけを消す。
    */
-  private withPeerMemoClearedForDigit(index: number, digit: number): SudokuGrid {
+  private withPeerMemoClearedForDigit(
+    index: number,
+    digit: number,
+  ): SudokuGrid {
     const bit = 1 << (digit - 1);
     const memoClearMask = 0x1ff & ~bit;
     const peers = sudokuPeerIndices(index);
@@ -114,5 +140,62 @@ export class SudokuGrid {
     if (c.value !== 0) return this;
     const bit = 1 << (digit - 1);
     return this.withCell(index, { ...c, memoMask: c.memoMask ^ bit });
+  }
+
+  /**
+   * 論理解法用: 各空マスの memoMask を、確定数字のみから計算した候補で上書きする。
+   * 確定マスの memo は 0。
+   */
+  withLogicCandidatesSyncedFromValues(): SudokuGrid {
+    const values = this.values();
+    return new SudokuGrid(
+      this.cells.map((c, i) =>
+        c.value !== 0
+          ? { value: c.value, memoMask: 0 }
+          : { value: 0, memoMask: computeCandidateMaskForCell(values, i) },
+      ),
+    );
+  }
+
+  /**
+   * 論理 1 手の確定（正解文字列なし）。空マスかつ候補に digit が含まれること。
+   * 確定後、空マスの memo は「旧 memo ∩ 新ルールベース候補」で引き継ぐ。
+   */
+  assignDeducedDigit(index: number, digit: number): SudokuGrid {
+    if (digit < 1 || digit > 9) return this;
+    const c = this.cells[index];
+    if (c.value !== 0) return this;
+    const bit = 1 << (digit - 1);
+    if ((c.memoMask & bit) === 0) return this;
+
+    const nextValues = [...this.values()];
+    nextValues[index] = digit;
+
+    const nextCells = this.cells.map((cell, i) => {
+      if (i === index) return { value: digit, memoMask: 0 };
+      if (cell.value !== 0) return { value: cell.value, memoMask: 0 };
+      const base = computeCandidateMaskForCell(nextValues, i);
+      return {
+        value: 0,
+        memoMask: cell.memoMask & base,
+      };
+    });
+    return new SudokuGrid(nextCells);
+  }
+
+  /**
+   * 空マスで、論理候補から 1 数字分だけ削除する（1 手の候補削減）。
+   * 変化がなければ this を返す。
+   */
+  eliminateLogicalCandidate(index: number, digit: number): SudokuGrid {
+    if (digit < 1 || digit > 9) return this;
+    const c = this.cells[index];
+    if (c.value !== 0) return this;
+    const bit = 1 << (digit - 1);
+    if ((c.memoMask & bit) === 0) return this;
+    return this.withCell(index, {
+      ...c,
+      memoMask: c.memoMask & ~bit,
+    });
   }
 }
