@@ -42,53 +42,40 @@ function tryUnit(
 export function tryFullHouseStep(
   grid: SudokuGrid,
 ): TechniqueApplyResult | null {
-  // 1ユニットで見つけたら即 return するのではなく、
-  // 見つかった分だけ適用して全ユニットを最後まで調べる。
-  // さらに、途中の代入で新しいフルハウスが生まれるので fixpoint まで繰り返す。
-  let nextGrid = grid;
+  // 1周だけ走査し、その周回で見つかった手をすべて適用して返す。
   const values = [...grid.values()];
+  let nextGrid = grid;
   const changedCells: number[] = [];
-
-  while (true) {
-    let changedInPass = false;
-
-    for (let r = 0; r < 9; r++) {
-      const op = tryUnit(values, sudokuRowCellIndices(r));
-      if (!op) continue;
-      const before = nextGrid;
-      nextGrid = nextGrid.placeDigit(op.cellIndex, op.digit).next;
-      if (nextGrid !== before) {
-        changedInPass = true;
-        values[op.cellIndex] = op.digit;
-        changedCells.push(op.cellIndex);
-      }
+  for (let r = 0; r < 9; r++) {
+    const op = tryUnit(values, sudokuRowCellIndices(r));
+    if (!op) continue;
+    const before = nextGrid;
+    nextGrid = nextGrid.placeDigit(op.cellIndex, op.digit).next;
+    if (nextGrid !== before) {
+      values[op.cellIndex] = op.digit;
+      changedCells.push(op.cellIndex);
     }
-    for (let c = 0; c < 9; c++) {
-      const op = tryUnit(values, sudokuColCellIndices(c));
-      if (!op) continue;
-      const before = nextGrid;
-      nextGrid = nextGrid.placeDigit(op.cellIndex, op.digit).next;
-      if (nextGrid !== before) {
-        changedInPass = true;
-        values[op.cellIndex] = op.digit;
-        changedCells.push(op.cellIndex);
-      }
-    }
-    for (let b = 0; b < 9; b++) {
-      const op = tryUnit(values, sudokuBlockCellIndices(b));
-      if (!op) continue;
-      const before = nextGrid;
-      nextGrid = nextGrid.placeDigit(op.cellIndex, op.digit).next;
-      if (nextGrid !== before) {
-        changedInPass = true;
-        values[op.cellIndex] = op.digit;
-        changedCells.push(op.cellIndex);
-      }
-    }
-
-    if (!changedInPass) break;
   }
-
+  for (let c = 0; c < 9; c++) {
+    const op = tryUnit(values, sudokuColCellIndices(c));
+    if (!op) continue;
+    const before = nextGrid;
+    nextGrid = nextGrid.placeDigit(op.cellIndex, op.digit).next;
+    if (nextGrid !== before) {
+      values[op.cellIndex] = op.digit;
+      changedCells.push(op.cellIndex);
+    }
+  }
+  for (let b = 0; b < 9; b++) {
+    const op = tryUnit(values, sudokuBlockCellIndices(b));
+    if (!op) continue;
+    const before = nextGrid;
+    nextGrid = nextGrid.placeDigit(op.cellIndex, op.digit).next;
+    if (nextGrid !== before) {
+      values[op.cellIndex] = op.digit;
+      changedCells.push(op.cellIndex);
+    }
+  }
   if (changedCells.length === 0) return null;
   return { cellIndex: changedCells, grid: nextGrid };
 }
