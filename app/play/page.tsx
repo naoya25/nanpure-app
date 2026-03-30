@@ -8,7 +8,7 @@ import {
 } from "@/lib/supabase/server";
 
 export const metadata = {
-  title: "プレイ（問題を選ぶ） | nanpure-app",
+  title: "プレイ（問題を選ぶ） | ナンプレトレーニング",
 };
 
 /**

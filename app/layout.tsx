@@ -13,8 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "nanpure-app",
-  description: "ナンプレをプレイする Web アプリ",
+  title: "ナンプレトレーニング",
+  description:
+    "ナンプレの解法テクニックを学び、盤上で練習できる Web アプリ。論理の手筋を身につけながら問題に取り組めます。",
 };
 
 export default function RootLayout({

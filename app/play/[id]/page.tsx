@@ -14,7 +14,7 @@ type Props = {
 export async function generateMetadata({ params }: Props) {
   const { id } = await params;
   return {
-    title: `プレイ ${id.slice(0, 8)}… | nanpure-app`,
+    title: `プレイ ${id.slice(0, 8)}… | ナンプレトレーニング`,
   };
 }
 
