@@ -9,13 +9,7 @@ export type TechniqueCaseBase = {
     /** 81 要素。空セルの候補ビットマスク（9ビット想定）。 0x1ff は全候補を許可 */
     candidateMasks81: number[];
   };
-  expected: {
-    /** apply 後に確定しているはずのセル */
-    filled: Array<{
-      index: number;
-      digit: number;
-    }>;
-  };
+  expected: string;
 };
 
 /**
@@ -32,6 +26,7 @@ export const TECHNIQUE_CASES: TechniqueCaseBase[] = [
         "123456780000000000000000000000000000000000000000000000000000000000000000000000000",
       candidateMasks81: new Array(81).fill(0),
     },
-    expected: { filled: [{ index: 8, digit: 9 }] },
+    expected:
+      "123456789000000000000000000000000000000000000000000000000000000000000000000000000",
   },
 ];
