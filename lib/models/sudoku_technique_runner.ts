@@ -62,6 +62,7 @@ export function runTechniqueAutoUntilNoChange(
       steps.push({
         techniqueId,
         cellIndex: result.cellIndex,
+        grid: result.grid,
       });
     }
 

@@ -196,7 +196,10 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       return;
     }
 
-    const nh = h.recordNext(nextGrid);
+    let nh = h;
+    for (const step of steps) {
+      nh = nh.recordNext(step.grid);
+    }
     setHistory(nh);
 
     const highlighted = new Set<number>();

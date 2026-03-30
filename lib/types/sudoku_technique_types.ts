@@ -42,6 +42,7 @@ export type TechniqueApplyResult = {
 export type TechniqueAutoRunStep = {
   techniqueId: TechniqueId;
   cellIndex: number[];
+  grid: SudokuGrid;
 };
 
 /** 自動実行の結果 */
