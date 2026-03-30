@@ -36,31 +36,60 @@ function tryUnit(
 export function tryHiddenSingleStep(
   grid: SudokuGrid,
 ): TechniqueApplyResult | null {
-  const values = grid.values();
-  const getMask = (cellIndex: number) => grid.cellAt(cellIndex).memoMask;
-  for (let r = 0; r < 9; r++) {
-    const hit = tryUnit(values, getMask, sudokuRowCellIndices(r));
-    if (hit) {
-      const next = grid.assignDeducedDigit(hit.cellIndex, hit.digit);
-      if (next === grid) return null;
-      return { cellIndex: [hit.cellIndex], grid: next };
+  // 見つかった hidden single を 1 回だけで終わらせず、
+  // 候補更新によって新たに hidden single が生まれなくなるまで適用してから返す。
+  let nextGrid = grid;
+  const values = [...grid.values()];
+  const changedCells: number[] = [];
+
+  while (true) {
+    let didChange = false;
+
+    // `nextGrid` を都度参照するので、割り当てによる memoMask 更新が反映される。
+    const getMask = (cellIndex: number) => nextGrid.cellAt(cellIndex).memoMask;
+
+    for (let r = 0; r < 9; r++) {
+      const hit = tryUnit(values, getMask, sudokuRowCellIndices(r));
+      if (!hit) continue;
+
+      const before = nextGrid;
+      nextGrid = nextGrid.assignDeducedDigit(hit.cellIndex, hit.digit);
+      if (nextGrid !== before) {
+        values[hit.cellIndex] = hit.digit;
+        changedCells.push(hit.cellIndex);
+        didChange = true;
+      }
     }
-  }
-  for (let c = 0; c < 9; c++) {
-    const hit = tryUnit(values, getMask, sudokuColCellIndices(c));
-    if (hit) {
-      const next = grid.assignDeducedDigit(hit.cellIndex, hit.digit);
-      if (next === grid) return null;
-      return { cellIndex: [hit.cellIndex], grid: next };
+
+    for (let c = 0; c < 9; c++) {
+      const hit = tryUnit(values, getMask, sudokuColCellIndices(c));
+      if (!hit) continue;
+
+      const before = nextGrid;
+      nextGrid = nextGrid.assignDeducedDigit(hit.cellIndex, hit.digit);
+      if (nextGrid !== before) {
+        values[hit.cellIndex] = hit.digit;
+        changedCells.push(hit.cellIndex);
+        didChange = true;
+      }
     }
-  }
-  for (let b = 0; b < 9; b++) {
-    const hit = tryUnit(values, getMask, sudokuBlockCellIndices(b));
-    if (hit) {
-      const next = grid.assignDeducedDigit(hit.cellIndex, hit.digit);
-      if (next === grid) return null;
-      return { cellIndex: [hit.cellIndex], grid: next };
+
+    for (let b = 0; b < 9; b++) {
+      const hit = tryUnit(values, getMask, sudokuBlockCellIndices(b));
+      if (!hit) continue;
+
+      const before = nextGrid;
+      nextGrid = nextGrid.assignDeducedDigit(hit.cellIndex, hit.digit);
+      if (nextGrid !== before) {
+        values[hit.cellIndex] = hit.digit;
+        changedCells.push(hit.cellIndex);
+        didChange = true;
+      }
     }
+
+    if (!didChange) break;
   }
-  return null;
+
+  if (changedCells.length === 0) return null;
+  return { cellIndex: changedCells, grid: nextGrid };
 }
