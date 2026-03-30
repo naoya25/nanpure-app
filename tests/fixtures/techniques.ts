@@ -1,0 +1,37 @@
+import { TechniqueId } from "@/lib/types/sudoku_technique_types";
+
+export type TechniqueCaseBase = {
+  name: string;
+  techniqueId: TechniqueId;
+  input: {
+    /** 81 文字。空は `0` */
+    values81: string;
+    /** 81 要素。空セルの候補ビットマスク（9ビット想定）。 0x1ff は全候補を許可 */
+    candidateMasks81: number[];
+  };
+  expected: {
+    /** apply 後に確定しているはずのセル */
+    filled: Array<{
+      index: number;
+      digit: number;
+    }>;
+  };
+};
+
+/**
+ * ユーザーが用意する盤面（入力）と期待結果（確定セル）。
+ *
+ * ここを埋めるだけで、technique のユニットテストが回るようにしてあります。
+ */
+export const TECHNIQUE_CASES: TechniqueCaseBase[] = [
+  {
+    name: "fullHouse: row0 missing 9 is unique",
+    techniqueId: TechniqueId.FULL_HOUSE,
+    input: {
+      values81:
+        "123456780000000000000000000000000000000000000000000000000000000000000000000000000",
+      candidateMasks81: new Array(81).fill(0),
+    },
+    expected: { filled: [{ index: 8, digit: 9 }] },
+  },
+];

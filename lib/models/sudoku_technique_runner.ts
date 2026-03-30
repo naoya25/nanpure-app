@@ -1,5 +1,5 @@
 import type { SudokuGrid } from "@/lib/models/sudoku_grid";
-import type {
+import {
   TechniqueApplyResult,
   TechniqueId,
 } from "@/lib/types/sudoku_technique_types";
@@ -14,19 +14,17 @@ export type TechniqueDescriptor = {
 };
 
 export const TECHNIQUE_BUTTONS = [
-  { id: "fullHouse", label: "フルハウス" },
-  { id: "single", label: "シングル" },
-  { id: "hiddenSingle", label: "隠れシングル" },
+  { id: TechniqueId.FULL_HOUSE, label: "フルハウス" },
+  { id: TechniqueId.SINGLE, label: "シングル" },
+  { id: TechniqueId.HIDDEN_SINGLE, label: "隠れシングル" },
 ] as const satisfies readonly TechniqueDescriptor[];
 
-type TryTechnique = (
-  grid: SudokuGrid,
-) => TechniqueApplyResult | null;
+type TryTechnique = (grid: SudokuGrid) => TechniqueApplyResult | null;
 
 const TRY_BY_ID: Record<TechniqueId, TryTechnique> = {
-  fullHouse: tryFullHouseStep,
-  single: trySingleStep,
-  hiddenSingle: tryHiddenSingleStep,
+  [TechniqueId.FULL_HOUSE]: tryFullHouseStep,
+  [TechniqueId.SINGLE]: trySingleStep,
+  [TechniqueId.HIDDEN_SINGLE]: tryHiddenSingleStep,
 };
 
 export function runTechniqueStep(
