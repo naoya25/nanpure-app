@@ -141,7 +141,7 @@ type SudokuBoardProps = {
   setSelectedIndex: (index: number) => void;
   board: SudokuGrid;
   memoHighlightDigit: number | null;
-  solution81: string;
+  solution81?: string;
   techniqueHighlightedCells: ReadonlySet<number> | null;
 };
 
@@ -162,12 +162,10 @@ export function SudokuBoard({
         {gridValues.map((value, i) => {
           const readOnly = cellReadOnly[i];
           const h = cellHighlights(i, selectedIndex, gridValues);
-          const incorrect = isCellMismatchingSolution(
-            i,
-            gridValues,
-            solution81,
-            fixed,
-          );
+          const incorrect =
+            solution81 !== undefined
+              ? isCellMismatchingSolution(i, gridValues, solution81, fixed)
+              : false;
           const mask = board.cellAt(i).memoMask;
           const showMemo = value === 0 && mask !== 0;
           const techniqueHighlighted = techniqueHighlightedCells?.has(i) ?? false;
