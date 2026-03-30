@@ -1,4 +1,5 @@
 import { SUDOKU_CELLS, sudokuPeerIndices } from "@/lib/validates/grid";
+import { isDigitCorrectForSolution } from "@/lib/validates/validate";
 
 /**
  * 1 マス分の状態。確定数字とメモ（候補ビットマスク）をひとまとめにする。
@@ -44,13 +45,42 @@ export class SudokuGrid {
   }
 
   /**
-   * 正解として数字を入れたとき: 確定し、そのマスのメモを消す。
-   * さらに同じ行・列・3×3 ブロック内の他マスから、入力した数字に対応するメモだけを消す。
+   * `solution81` の当該マスと照合して正誤を決め、盤を更新する（入口はこれだけでよい）。
+   * 一致するときだけ行・列・3×3 のピアから、その数字に対応するメモを消す。不一致のときは当該マスだけ更新しピアは触らない。
    */
-  placeDigit(index: number, digit: number): SudokuGrid {
+  placeDigit(
+    index: number,
+    digit: number,
+    solution81: string,
+  ): { next: SudokuGrid; matchesSolution: boolean } {
     if (digit < 1 || digit > 9) {
-      return this.withCell(index, { value: digit, memoMask: 0 });
+      return { next: this, matchesSolution: false };
     }
+    if (solution81.length !== SUDOKU_CELLS) {
+      throw new Error(
+        `SudokuGrid.placeDigit: solution81 must be ${SUDOKU_CELLS} chars`,
+      );
+    }
+    const matchesSolution = isDigitCorrectForSolution(
+      digit,
+      solution81,
+      index,
+    );
+    const next = matchesSolution
+      ? this.withPeerMemoClearedForDigit(index, digit)
+      : this.withSingleCellDigit(index, digit);
+    return { next, matchesSolution };
+  }
+
+  /** 当該マスに数字を置き、メモはそのマスのみクリア（ピアは変更しない） */
+  private withSingleCellDigit(index: number, digit: number): SudokuGrid {
+    return this.withCell(index, { value: digit, memoMask: 0 });
+  }
+
+  /**
+   * 正解と一致する配置: 当該マスを確定し、ピアから入力数字に対応するメモだけを消す。
+   */
+  private withPeerMemoClearedForDigit(index: number, digit: number): SudokuGrid {
     const bit = 1 << (digit - 1);
     const memoClearMask = 0x1ff & ~bit;
     const peers = sudokuPeerIndices(index);

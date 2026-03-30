@@ -1,5 +1,25 @@
 import { SUDOKU_CELLS } from "@/lib/validates/grid";
 
+/**
+ * ユーザーが編集可能なマスで、確定値が解答と一致しないか。
+ * 空マス（0）は false。`fixed` のマスは比較しない（常に false）。
+ */
+export function isCellMismatchingSolution(
+  index: number,
+  values: readonly number[],
+  solution81: string,
+  fixed: readonly boolean[],
+): boolean {
+  if (index < 0 || index >= SUDOKU_CELLS) return false;
+  if (solution81.length !== SUDOKU_CELLS || values.length !== SUDOKU_CELLS) {
+    return false;
+  }
+  if (fixed[index]) return false;
+  const v = values[index];
+  if (v < 1 || v > 9) return false;
+  return solution81[index] !== String(v);
+}
+
 /** 入力した 1〜9 がそのマスの正解と一致するか */
 export function isDigitCorrectForSolution(
   digit: number,

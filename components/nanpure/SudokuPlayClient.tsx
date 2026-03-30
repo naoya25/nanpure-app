@@ -8,7 +8,7 @@ import { parsePuzzle81 } from "@/lib/validates/grid";
 import {
   isBoardComplete,
   isBoardMatchingSolution,
-  isDigitCorrectForSolution,
+  isCellMismatchingSolution,
   isEverySolutionCellForDigitFilled,
 } from "@/lib/validates/validate";
 
@@ -129,9 +129,20 @@ function CellMemoMarks({
   );
 }
 
-function cellSurfaceClasses(readOnly: boolean, h: CellHighlight): string {
+function cellSurfaceClasses(
+  readOnly: boolean,
+  h: CellHighlight,
+  incorrect: boolean,
+): string {
   if (h.selected) {
-    return "relative z-10 bg-sky-200 ring-2 ring-inset ring-blue-600";
+    return incorrect
+      ? "relative z-10 bg-red-200 ring-2 ring-inset ring-blue-600"
+      : "relative z-10 bg-sky-200 ring-2 ring-inset ring-blue-600";
+  }
+  if (incorrect) {
+    return readOnly
+      ? "bg-red-100 text-red-900"
+      : "bg-red-100 text-red-900 hover:bg-red-200";
   }
   if (h.digitMatch) {
     return readOnly
@@ -157,7 +168,6 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
   const [board, setBoard] = useState(() => SudokuGrid.fromValues(seedValues));
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [mistakes, setMistakes] = useState(0);
-  const [inputWarning, setInputWarning] = useState<string | null>(null);
   const [phase, setPhase] = useState<"playing" | "result">("playing");
   const [won, setWon] = useState<boolean | null>(null);
 
@@ -196,20 +206,17 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       if (digitComplete[digit]) return;
       if (selectedIndex === null || cellReadOnly[selectedIndex]) return;
       const i = selectedIndex;
-      const correct = isDigitCorrectForSolution(digit, puzzle.solution_81, i);
+      const { next, matchesSolution } = board.placeDigit(
+        i,
+        digit,
+        puzzle.solution_81,
+      );
+      setBoard(next);
 
-      if (!correct) {
-        setBoard((b) => b.clearValueKeepMemo(i));
+      if (!matchesSolution) {
         setMistakes((m) => m + 1);
-        setInputWarning(
-          `「${digit}」はこのマスでは正しくありません。別の数字を試してください。`,
-        );
         return;
       }
-
-      const next = board.placeDigit(i, digit);
-      setBoard(next);
-      setInputWarning(null);
 
       const values = [...next.values()];
       if (isBoardComplete(values)) {
@@ -232,7 +239,6 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
     if (selectedIndex === null || cellReadOnly[selectedIndex]) return;
     const i = selectedIndex;
     setBoard((b) => b.clearCell(i));
-    setInputWarning(null);
   }, [phase, selectedIndex, cellReadOnly]);
 
   const toggleMemoAtSelection = useCallback(
@@ -246,12 +252,6 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
     },
     [phase, selectedIndex, cellReadOnly, board],
   );
-
-  useEffect(() => {
-    if (inputWarning === null) return;
-    const id = window.setTimeout(() => setInputWarning(null), 1000);
-    return () => window.clearTimeout(id);
-  }, [inputWarning]);
 
   useEffect(() => {
     if (phase !== "playing") return;
@@ -310,16 +310,6 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
 
   return (
     <main className="mx-auto max-w-lg px-4 py-8">
-      {inputWarning ? (
-        <div
-          role="alert"
-          aria-live="assertive"
-          className="fixed top-[max(1rem,env(safe-area-inset-top,0px))] left-1/2 z-50 w-[min(calc(100vw-2rem),32rem)] -translate-x-1/2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900 shadow-lg"
-        >
-          {inputWarning}
-        </div>
-      ) : null}
-
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-zinc-900">ナンプレ</h1>
@@ -355,6 +345,12 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
             {gridValues.map((value, i) => {
               const readOnly = cellReadOnly[i];
               const h = cellHighlights(i, selectedIndex, gridValues);
+              const incorrect = isCellMismatchingSolution(
+                i,
+                gridValues,
+                puzzle.solution_81,
+                fixed,
+              );
               const mask = board.cellAt(i).memoMask;
               const showMemo = value === 0 && mask !== 0;
               return (
@@ -372,7 +368,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
                       ? "text-xl leading-none sm:text-2xl sm:leading-none"
                       : "",
                     cellBorderClasses(i),
-                    cellSurfaceClasses(readOnly, h),
+                    cellSurfaceClasses(readOnly, h, incorrect),
                   ].join(" ")}
                 >
                   {showMemo ? (
