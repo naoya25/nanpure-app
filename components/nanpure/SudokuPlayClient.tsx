@@ -7,7 +7,10 @@ import { ControlPad } from "@/components/nanpure/ControlPad";
 import { SudokuBoard } from "@/components/nanpure/SudokuBoard";
 import { PlayHistory } from "@/lib/models/play_history";
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
-import { runTechniqueStep } from "@/lib/models/sudoku_technique_runner";
+import {
+  runTechniqueAutoUntilNoChange,
+  runTechniqueStep,
+} from "@/lib/models/sudoku_technique_runner";
 import {
   TECHNIQUE_LABELS,
   type TechniqueId,
@@ -55,8 +58,13 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
   const [phase, setPhase] = useState<"playing" | "result">("playing");
   const [won, setWon] = useState<boolean | null>(null);
   const [showTechniqueList, setShowTechniqueList] = useState(false);
+  const [showAutoRunList, setShowAutoRunList] = useState(false);
   const [techniqueHighlightedCells, setTechniqueHighlightedCells] =
     useState<ReadonlySet<number> | null>(null);
+  const [selectedTechniqueIdsForAuto, setSelectedTechniqueIdsForAuto] =
+    useState<ReadonlySet<TechniqueId>>(
+      () => new Set(TECHNIQUE_LABELS.map((t) => t.id)),
+    );
 
   const techniqueButtons = TECHNIQUE_LABELS;
 
@@ -159,6 +167,65 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
     },
     [phase, puzzle.solution_81],
   );
+
+  const toggleTechniqueSelectionForAuto = useCallback(
+    (techniqueId: TechniqueId) => {
+      setSelectedTechniqueIdsForAuto((prev) => {
+        const next = new Set(prev);
+        if (next.has(techniqueId)) next.delete(techniqueId);
+        else next.add(techniqueId);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const applyTechniquesAuto = useCallback(() => {
+    if (phase !== "playing") return;
+    const ids = Array.from(selectedTechniqueIdsForAuto);
+    if (ids.length === 0) return;
+
+    const h = historyRef.current;
+    const { grid: nextGrid, steps } = runTechniqueAutoUntilNoChange(
+      h.present,
+      ids,
+    );
+
+    if (steps.length === 0) {
+      setShowAutoRunList(false);
+      return;
+    }
+
+    const nh = h.recordNext(nextGrid);
+    setHistory(nh);
+
+    const highlighted = new Set<number>();
+    for (const step of steps) {
+      for (const i of step.cellIndex) highlighted.add(i);
+    }
+    setTechniqueHighlightedCells(highlighted);
+
+    const initialValues = h.present.values();
+    const finalValues = nextGrid.values();
+    let mismatchCount = 0;
+    for (let i = 0; i < 81; i++) {
+      if (initialValues[i] === finalValues[i]) continue;
+      if (finalValues[i] === 0) continue;
+      const expected = Number(puzzle.solution_81[i] ?? 0);
+      if (finalValues[i] !== expected) mismatchCount += 1;
+    }
+    if (mismatchCount > 0) {
+      setMistakes((m) => m + mismatchCount);
+    }
+
+    const values = [...finalValues];
+    if (isBoardComplete(values)) {
+      setPhase("result");
+      setWon(isBoardMatchingSolution(values, puzzle.solution_81));
+    }
+
+    setShowAutoRunList(false);
+  }, [phase, puzzle.solution_81, selectedTechniqueIdsForAuto]);
 
   const clearCell = useCallback(() => {
     if (phase !== "playing") return;
@@ -323,9 +390,30 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
           onRedo={redo}
           onClearCell={clearCell}
           showTechniqueList={showTechniqueList}
-          onToggleTechniqueList={() => setShowTechniqueList((v) => !v)}
+          onToggleTechniqueList={() =>
+            setShowTechniqueList((v) => {
+              const next = !v;
+              if (next) setShowAutoRunList(false);
+              return next;
+            })
+          }
           onCloseTechniqueList={() => setShowTechniqueList(false)}
+          showAutoRunList={showAutoRunList}
+          onToggleAutoRunList={() =>
+            setShowAutoRunList((v) => {
+              const next = !v;
+              if (next) setShowTechniqueList(false);
+              return next;
+            })
+          }
+          onCloseAutoRunList={() => setShowAutoRunList(false)}
           onApplyTechnique={applyTechnique}
+          selectedTechniqueIds={selectedTechniqueIdsForAuto}
+          onToggleTechniqueSelection={toggleTechniqueSelectionForAuto}
+          onAutoRunTechniques={applyTechniquesAuto}
+          canAutoRunTechniques={
+            phase === "playing" && selectedTechniqueIdsForAuto.size > 0
+          }
           techniqueButtons={techniqueButtons}
           isPlaying={phase === "playing"}
           onFocusAnyControl={clearTechniqueHighlightOnFocus}

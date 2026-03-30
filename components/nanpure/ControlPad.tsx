@@ -1,7 +1,9 @@
+import { AutoRunIcon } from "@/components/icons/auto-run-icon";
 import { ClearSelectionIcon } from "@/components/icons/clear-selection-icon";
 import { PlayIcon } from "@/components/icons/play-icon";
 import { RedoIcon } from "@/components/icons/redo-icon";
 import { UndoIcon } from "@/components/icons/undo-icon";
+import { AutoRunPopover } from "@/components/nanpure/AutoRunPopover";
 import { TechniquePopover } from "@/components/nanpure/TechniquePopover";
 import type { TechniqueDescriptor, TechniqueId } from "@/lib/types/sudoku_technique_types";
 
@@ -18,7 +20,14 @@ type ControlPadProps = {
   showTechniqueList: boolean;
   onToggleTechniqueList: () => void;
   onCloseTechniqueList: () => void;
+  showAutoRunList: boolean;
+  onToggleAutoRunList: () => void;
+  onCloseAutoRunList: () => void;
   onApplyTechnique: (techniqueId: TechniqueId) => void;
+  selectedTechniqueIds: ReadonlySet<TechniqueId>;
+  onToggleTechniqueSelection: (techniqueId: TechniqueId) => void;
+  onAutoRunTechniques: () => void;
+  canAutoRunTechniques: boolean;
   techniqueButtons: readonly TechniqueDescriptor[];
   isPlaying: boolean;
   onFocusAnyControl: () => void;
@@ -37,7 +46,14 @@ export function ControlPad({
   showTechniqueList,
   onToggleTechniqueList,
   onCloseTechniqueList,
+  showAutoRunList,
+  onToggleAutoRunList,
+  onCloseAutoRunList,
   onApplyTechnique,
+  selectedTechniqueIds,
+  onToggleTechniqueSelection,
+  onAutoRunTechniques,
+  canAutoRunTechniques,
   techniqueButtons,
   isPlaying,
   onFocusAnyControl,
@@ -79,7 +95,66 @@ export function ControlPad({
           </button>
         ))}
       </div>
-      <div className="relative flex items-center justify-center gap-2">
+      <div className="relative flex flex-col items-center gap-2">
+        <div className="flex items-center justify-center gap-2">
+          <button
+            type="button"
+            disabled={!isPlaying || !canUndo}
+            onClick={onUndo}
+            onFocus={onFocusAnyControl}
+            title="一手戻る"
+            aria-label="一手戻る"
+            className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-50 text-zinc-700 active:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-100"
+          >
+            <UndoIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+          </button>
+          <button
+            type="button"
+            disabled={!canClearCell}
+            onClick={onClearCell}
+            onFocus={onFocusAnyControl}
+            title="選択中のマスの数字とメモを消す（Backspace でも可）"
+            aria-label="選択中のマスの数字とメモを消す"
+            className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-50 text-zinc-700 active:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-100"
+          >
+            <ClearSelectionIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+          </button>
+          <button
+            type="button"
+            disabled={!isPlaying || !canRedo}
+            onClick={onRedo}
+            onFocus={onFocusAnyControl}
+            title="一手進める"
+            aria-label="一手進める"
+            className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-50 text-zinc-700 active:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-100"
+          >
+            <RedoIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+          </button>
+          <button
+            type="button"
+            onClick={onToggleTechniqueList}
+            onFocus={onFocusAnyControl}
+            aria-expanded={showTechniqueList ? "true" : undefined}
+            disabled={!isPlaying}
+            title="テクニックを実行"
+            aria-label="テクニックを実行"
+            className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-900 text-white active:bg-zinc-700 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-800"
+          >
+            <PlayIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+          </button>
+          <button
+            type="button"
+            onClick={onToggleAutoRunList}
+            onFocus={onFocusAnyControl}
+            aria-expanded={showAutoRunList ? "true" : undefined}
+            disabled={!isPlaying}
+            title="テクニック自動運行の設定"
+            aria-label="テクニック自動運行の設定"
+            className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-50 text-zinc-700 active:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-100"
+          >
+            <AutoRunIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+          </button>
+        </div>
         <TechniquePopover
           open={showTechniqueList}
           techniques={techniqueButtons}
@@ -87,51 +162,16 @@ export function ControlPad({
           onApply={onApplyTechnique}
           onFocusAnyControl={onFocusAnyControl}
         />
-        <button
-          type="button"
-          disabled={!isPlaying || !canUndo}
-          onClick={onUndo}
-          onFocus={onFocusAnyControl}
-          title="一手戻る"
-          aria-label="一手戻る"
-          className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-50 text-zinc-700 active:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-100"
-        >
-          <UndoIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-        </button>
-        <button
-          type="button"
-          disabled={!canClearCell}
-          onClick={onClearCell}
-          onFocus={onFocusAnyControl}
-          title="選択中のマスの数字とメモを消す（Backspace でも可）"
-          aria-label="選択中のマスの数字とメモを消す"
-          className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-50 text-zinc-700 active:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-100"
-        >
-          <ClearSelectionIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-        </button>
-        <button
-          type="button"
-          disabled={!isPlaying || !canRedo}
-          onClick={onRedo}
-          onFocus={onFocusAnyControl}
-          title="一手進める"
-          aria-label="一手進める"
-          className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-50 text-zinc-700 active:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-100"
-        >
-          <RedoIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-        </button>
-        <button
-          type="button"
-          onClick={onToggleTechniqueList}
-          onFocus={onFocusAnyControl}
-          aria-expanded={showTechniqueList ? "true" : undefined}
-          disabled={!isPlaying}
-          title="テクニックを実行"
-          aria-label="テクニックを実行"
-          className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-900 text-white active:bg-zinc-700 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-800"
-        >
-          <PlayIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-        </button>
+        <AutoRunPopover
+          open={showAutoRunList}
+          techniques={techniqueButtons}
+          selectedTechniqueIds={selectedTechniqueIds}
+          onToggleTechniqueSelection={onToggleTechniqueSelection}
+          onRun={onAutoRunTechniques}
+          canRun={canAutoRunTechniques}
+          onClose={onCloseAutoRunList}
+          onFocusAnyControl={onFocusAnyControl}
+        />
       </div>
     </div>
   );

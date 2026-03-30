@@ -21,7 +21,12 @@ export function TechniquePopover({
   if (!open) return null;
 
   return (
-    <div className="absolute bottom-full right-0 z-20 mb-2 w-[min(22rem,calc(100vw-2rem))] rounded-lg border border-zinc-200 bg-white p-3 shadow-lg">
+    <div
+      className={[
+        "absolute left-1/2 top-full z-30 mt-2 w-[min(20rem,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] -translate-x-1/2",
+        "rounded-lg border border-zinc-200 bg-white p-3 shadow-lg",
+      ].join(" ")}
+    >
       <div className="mb-3 flex items-center justify-between gap-2">
         <p className="text-sm font-semibold text-zinc-900">テクニック一覧</p>
         <button
@@ -40,7 +45,7 @@ export function TechniquePopover({
             type="button"
             onClick={() => onApply(t.id)}
             onFocus={onFocusAnyControl}
-            className="rounded-md border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-100 active:bg-zinc-200 disabled:pointer-events-none disabled:opacity-40"
+            className="rounded-md border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-100 active:bg-zinc-200"
           >
             {t.label}
           </button>

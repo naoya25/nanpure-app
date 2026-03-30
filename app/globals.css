@@ -6,6 +6,10 @@
   --foreground: #18181b;
 }
 
+html {
+  scrollbar-gutter: stable;
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
