@@ -156,7 +156,11 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       const next = result.grid;
       const nextValues = next.values();
       const uniqueChangedCells = Array.from(new Set(result.cellIndex));
-      const nh = h.recordNext(next, techniqueId, uniqueChangedCells);
+      const nh = h.recordNext(
+        next,
+        result.historyTechniqueId ?? techniqueId,
+        uniqueChangedCells,
+      );
       setHistory(nh);
       setTechniqueHighlightedCells(new Set(uniqueChangedCells));
       const mismatchCount = uniqueChangedCells.reduce((acc, idx) => {
