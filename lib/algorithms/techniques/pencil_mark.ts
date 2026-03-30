@@ -5,7 +5,8 @@ import { sudokuPeerIndices } from "@/lib/validates/grid";
 
 /**
  * ペンシルマーク（候補の記入）。
- * 空マスごとに「ピアに存在しない数字だけ」を候補として再計算し、メモを一括更新する。
+ * 空マスでメモが未入力（mask=0）のときだけ、ピアに存在しない数字を候補として記入する。
+ * すでにメモがある空マスはユーザー入力を正とみなし、増減・上書きしない。
  */
 export function tryPencilMarkStep(
   grid: SudokuGrid,
@@ -16,6 +17,12 @@ export function tryPencilMarkStep(
 
   for (let i = 0; i < 81; i++) {
     if (values[i] !== 0) continue;
+
+    const memoMask = grid.cellAt(i).memoMask & 0x1ff;
+    if (memoMask !== 0) {
+      nextCandidateMasks[i] = memoMask;
+      continue;
+    }
 
     let usedMask = 0;
     for (const peerIndex of sudokuPeerIndices(i)) {
@@ -28,7 +35,7 @@ export function tryPencilMarkStep(
     const candidateMask = ALL_CANDIDATE_BITS & ~usedMask;
     nextCandidateMasks[i] = candidateMask;
 
-    if (grid.cellAt(i).memoMask !== candidateMask) {
+    if (candidateMask !== memoMask) {
       changedCells.push(i);
     }
   }
