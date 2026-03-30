@@ -68,16 +68,22 @@ export class SudokuGrid {
   }
 
   /**
-   * `solution81` の当該マスと照合して正誤を決め、盤を更新する（入口はこれだけでよい）。
-   * 一致するときだけ行・列・3×3 のピアから、その数字に対応するメモを消す。不一致のときは当該マスだけ更新しピアは触らない。
+   * マスへ数字を配置する共通入口。
+   *
+   * - `solution81` あり: ユーザー入力。正誤判定し、正解時のみピアの同数字メモを消す。
+   * - `solution81` なし: 論理確定。候補未同期（memo=0）も許可し、該当マスのみ確定する。
    */
   placeDigit(
     index: number,
     digit: number,
-    solution81: string,
+    solution81?: string,
   ): { next: SudokuGrid; matchesSolution: boolean } {
     if (digit < 1 || digit > 9) {
       return { next: this, matchesSolution: false };
+    }
+    if (solution81 === undefined) {
+      const next = this.withDeducedDigit(index, digit);
+      return { next, matchesSolution: next !== this };
     }
     if (solution81.length !== SUDOKU_CELLS) {
       throw new Error(
@@ -138,16 +144,14 @@ export class SudokuGrid {
     return this.withCell(index, { ...c, memoMask: c.memoMask ^ bit });
   }
 
-  /**
-   * 論理 1 手の確定（正解文字列なし）。空マスかつ候補に digit が含まれること。
-   * 確定後、空マスの memo は「旧 memo ∩ 新ルールベース候補」で引き継ぐ。
-   */
-  assignDeducedDigit(index: number, digit: number): SudokuGrid {
+  /** 論理 1 手の確定。空マスかつ（memo がある場合のみ）候補に digit が含まれること。 */
+  private withDeducedDigit(index: number, digit: number): SudokuGrid {
     if (digit < 1 || digit > 9) return this;
     const c = this.cells[index];
     if (c.value !== 0) return this;
     const bit = 1 << (digit - 1);
-    if ((c.memoMask & bit) === 0) return this;
+    // memo が未同期（0）の盤でも、テクニック側で導出した確定は適用できるようにする。
+    if (c.memoMask !== 0 && (c.memoMask & bit) === 0) return this;
 
     const nextValues = [...this.values()];
     nextValues[index] = digit;

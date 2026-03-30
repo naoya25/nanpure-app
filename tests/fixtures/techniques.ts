@@ -19,7 +19,7 @@ export type TechniqueCaseBase = {
  */
 export const TECHNIQUE_CASES: TechniqueCaseBase[] = [
   {
-    name: "fullHouse: row0 missing 9 is unique",
+    name: "fullHouse 1",
     techniqueId: TechniqueId.FULL_HOUSE,
     input: {
       values81:
@@ -28,5 +28,27 @@ export const TECHNIQUE_CASES: TechniqueCaseBase[] = [
     },
     expected:
       "123456789000000000000000000000000000000000000000000000000000000000000000000000000",
+  },
+  {
+    name: "fullHouse 2",
+    techniqueId: TechniqueId.FULL_HOUSE,
+    input: {
+      values81:
+        "123000000456000000780000000000000000000000000000000000000000000000000000000000000",
+      candidateMasks81: new Array(81).fill(0),
+    },
+    expected:
+      "123000000456000000789000000000000000000000000000000000000000000000000000000000000",
+  },
+  {
+    name: "fullHouse 3",
+    techniqueId: TechniqueId.FULL_HOUSE,
+    input: {
+      values81:
+        "100000000200000000300000000400000000500000000600000000700000000800000000000000000",
+      candidateMasks81: new Array(81).fill(0),
+    },
+    expected:
+      "100000000200000000300000000400000000500000000600000000700000000800000000900000000",
   },
 ];

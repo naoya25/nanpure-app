@@ -53,7 +53,7 @@ export function tryHiddenSingleStep(
       if (!hit) continue;
 
       const before = nextGrid;
-      nextGrid = nextGrid.assignDeducedDigit(hit.cellIndex, hit.digit);
+      nextGrid = nextGrid.placeDigit(hit.cellIndex, hit.digit).next;
       if (nextGrid !== before) {
         values[hit.cellIndex] = hit.digit;
         changedCells.push(hit.cellIndex);
@@ -66,7 +66,7 @@ export function tryHiddenSingleStep(
       if (!hit) continue;
 
       const before = nextGrid;
-      nextGrid = nextGrid.assignDeducedDigit(hit.cellIndex, hit.digit);
+      nextGrid = nextGrid.placeDigit(hit.cellIndex, hit.digit).next;
       if (nextGrid !== before) {
         values[hit.cellIndex] = hit.digit;
         changedCells.push(hit.cellIndex);
@@ -79,7 +79,7 @@ export function tryHiddenSingleStep(
       if (!hit) continue;
 
       const before = nextGrid;
-      nextGrid = nextGrid.assignDeducedDigit(hit.cellIndex, hit.digit);
+      nextGrid = nextGrid.placeDigit(hit.cellIndex, hit.digit).next;
       if (nextGrid !== before) {
         values[hit.cellIndex] = hit.digit;
         changedCells.push(hit.cellIndex);

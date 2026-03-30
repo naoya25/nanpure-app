@@ -56,7 +56,7 @@ export function tryFullHouseStep(
       const op = tryUnit(values, sudokuRowCellIndices(r));
       if (!op) continue;
       const before = nextGrid;
-      nextGrid = nextGrid.assignDeducedDigit(op.cellIndex, op.digit);
+      nextGrid = nextGrid.placeDigit(op.cellIndex, op.digit).next;
       if (nextGrid !== before) {
         changedInPass = true;
         values[op.cellIndex] = op.digit;
@@ -67,7 +67,7 @@ export function tryFullHouseStep(
       const op = tryUnit(values, sudokuColCellIndices(c));
       if (!op) continue;
       const before = nextGrid;
-      nextGrid = nextGrid.assignDeducedDigit(op.cellIndex, op.digit);
+      nextGrid = nextGrid.placeDigit(op.cellIndex, op.digit).next;
       if (nextGrid !== before) {
         changedInPass = true;
         values[op.cellIndex] = op.digit;
@@ -78,7 +78,7 @@ export function tryFullHouseStep(
       const op = tryUnit(values, sudokuBlockCellIndices(b));
       if (!op) continue;
       const before = nextGrid;
-      nextGrid = nextGrid.assignDeducedDigit(op.cellIndex, op.digit);
+      nextGrid = nextGrid.placeDigit(op.cellIndex, op.digit).next;
       if (nextGrid !== before) {
         changedInPass = true;
         values[op.cellIndex] = op.digit;

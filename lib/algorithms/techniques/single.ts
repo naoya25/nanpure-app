@@ -31,7 +31,7 @@ export function trySingleStep(
       }
 
       const before = nextGrid;
-      nextGrid = nextGrid.assignDeducedDigit(i, digit);
+      nextGrid = nextGrid.placeDigit(i, digit).next;
       if (nextGrid !== before) {
         values[i] = digit;
         changedCells.push(i);
