@@ -18,3 +18,15 @@ body {
   color: var(--foreground);
   font-family: var(--font-geist-sans), system-ui, sans-serif;
 }
+
+/*
+  プレイ盤・テンキー用の点カーソル。
+  macOS / Chrome 等の UA は button に cursor を直指定するため、親の継承だけでは効かない。
+  `public/cursors/play-dot.png`（32×32、ホットスポット 16,16）
+*/
+@media (pointer: fine) {
+  .play-surface-cursor,
+  .play-surface-cursor button {
+    cursor: url("/cursors/play-dot.png") 16 16, auto;
+  }
+}

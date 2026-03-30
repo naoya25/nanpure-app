@@ -144,8 +144,8 @@ function cellSurfaceClasses(readOnly: boolean, h: CellHighlight): string {
       : "bg-sky-50 text-zinc-900 hover:bg-sky-100";
   }
   return readOnly
-    ? "cursor-default bg-zinc-100 text-zinc-900"
-    : "cursor-pointer bg-white text-zinc-900 hover:bg-zinc-50";
+    ? "bg-zinc-100 text-zinc-900"
+    : "bg-white text-zinc-900 hover:bg-zinc-50";
 }
 
 export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
@@ -349,80 +349,82 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
         </div>
       </div>
 
-      <div className="inline-block rounded-lg border-2 border-zinc-700 bg-white p-0.5 shadow-sm">
-        <div className="grid grid-cols-9">
-          {gridValues.map((value, i) => {
-            const readOnly = cellReadOnly[i];
-            const h = cellHighlights(i, selectedIndex, gridValues);
-            const mask = board.cellAt(i).memoMask;
-            const showMemo = value === 0 && mask !== 0;
-            return (
-              <button
-                key={i}
-                type="button"
-                onClick={() => setSelectedIndex(i)}
-                aria-current={h.selected ? "true" : undefined}
-                className={[
-                  "flex h-9 w-9 font-medium sm:h-10 sm:w-10",
-                  showMemo
-                    ? "items-stretch p-0"
-                    : "items-center justify-center p-0",
-                  !showMemo && value !== 0
-                    ? "text-xl leading-none sm:text-2xl sm:leading-none"
-                    : "",
-                  cellBorderClasses(i),
-                  cellSurfaceClasses(readOnly, h),
-                ].join(" ")}
-              >
-                {showMemo ? (
-                  <CellMemoMarks
-                    mask={mask}
-                    highlightDigit={memoHighlightDigit}
-                  />
-                ) : value === 0 ? (
-                  ""
-                ) : (
-                  value
-                )}
-              </button>
-            );
-          })}
+      <div className="play-surface-cursor">
+        <div className="inline-block rounded-lg border-2 border-zinc-700 bg-white p-0.5 shadow-sm">
+          <div className="grid grid-cols-9">
+            {gridValues.map((value, i) => {
+              const readOnly = cellReadOnly[i];
+              const h = cellHighlights(i, selectedIndex, gridValues);
+              const mask = board.cellAt(i).memoMask;
+              const showMemo = value === 0 && mask !== 0;
+              return (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => setSelectedIndex(i)}
+                  aria-current={h.selected ? "true" : undefined}
+                  className={[
+                    "flex h-9 w-9 font-medium sm:h-10 sm:w-10",
+                    showMemo
+                      ? "items-stretch p-0"
+                      : "items-center justify-center p-0",
+                    !showMemo && value !== 0
+                      ? "text-xl leading-none sm:text-2xl sm:leading-none"
+                      : "",
+                    cellBorderClasses(i),
+                    cellSurfaceClasses(readOnly, h),
+                  ].join(" ")}
+                >
+                  {showMemo ? (
+                    <CellMemoMarks
+                      mask={mask}
+                      highlightDigit={memoHighlightDigit}
+                    />
+                  ) : value === 0 ? (
+                    ""
+                  ) : (
+                    value
+                  )}
+                </button>
+              );
+            })}
+          </div>
         </div>
-      </div>
 
-      <div className="mt-6 flex flex-col gap-3">
-        <div className="flex w-full max-w-full flex-nowrap items-stretch gap-0.5 sm:gap-1">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => {
-            const done = digitComplete[n];
-            return (
+        <div className="mt-6 flex flex-col gap-3">
+          <div className="flex w-full max-w-full flex-nowrap items-stretch gap-0.5 sm:gap-1">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => {
+              const done = digitComplete[n];
+              return (
+                <button
+                  key={n}
+                  type="button"
+                  disabled={done}
+                  onClick={() => applyDigit(n)}
+                  className={[
+                    "flex min-h-11 min-w-0 flex-1 basis-0 touch-manipulation items-center justify-center rounded-md text-lg font-semibold sm:min-h-12 sm:text-xl",
+                    done
+                      ? "pointer-events-none invisible"
+                      : "text-zinc-900 active:bg-zinc-100 sm:hover:bg-zinc-50",
+                  ].join(" ")}
+                >
+                  {n}
+                </button>
+              );
+            })}
+          </div>
+          <div className="flex w-full max-w-full flex-nowrap items-stretch gap-0.5 sm:gap-1">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
               <button
                 key={n}
                 type="button"
-                disabled={done}
-                onClick={() => applyDigit(n)}
-                className={[
-                  "flex min-h-11 min-w-0 flex-1 basis-0 touch-manipulation items-center justify-center rounded-md text-lg font-semibold sm:min-h-12 sm:text-xl",
-                  done
-                    ? "pointer-events-none invisible"
-                    : "text-zinc-900 active:bg-zinc-100 sm:hover:bg-zinc-50",
-                ].join(" ")}
+                onClick={() => toggleMemoAtSelection(n)}
+                className="flex min-h-11 min-w-0 flex-1 basis-0 touch-manipulation items-center justify-center rounded-md text-lg font-semibold text-zinc-500 active:bg-zinc-100 sm:min-h-12 sm:text-xl sm:hover:bg-zinc-50"
               >
                 {n}
               </button>
-            );
-          })}
-        </div>
-        <div className="flex w-full max-w-full flex-nowrap items-stretch gap-0.5 sm:gap-1">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-            <button
-              key={n}
-              type="button"
-              onClick={() => toggleMemoAtSelection(n)}
-              className="flex min-h-11 min-w-0 flex-1 basis-0 touch-manipulation items-center justify-center rounded-md text-lg font-semibold text-zinc-500 active:bg-zinc-100 sm:min-h-12 sm:text-xl sm:hover:bg-zinc-50"
-            >
-              {n}
-            </button>
-          ))}
+            ))}
+          </div>
         </div>
       </div>
     </main>
