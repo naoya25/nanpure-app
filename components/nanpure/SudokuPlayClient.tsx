@@ -74,6 +74,15 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
     historyRef.current = history;
   }, [history]);
 
+  useEffect(() => {
+    if (process.env.NODE_ENV !== "development") return;
+    const values81 = board.values().join("");
+    const candidateMasks81 = Array.from({ length: 81 }, (_, i) =>
+      board.cellAt(i).memoMask,
+    );
+    console.log("[SudokuPlay debug] position", { values81, candidateMasks81 });
+  }, [board]);
+
   const gridValues = useMemo(() => [...board.values()], [board]);
 
   /** 選択マスに確定数字があるとき、盤上のメモで同じ数字を強調する */
