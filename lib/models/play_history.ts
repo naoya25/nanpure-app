@@ -1,7 +1,6 @@
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 
 /** undo スタックに積む最大件数（現在の盤は含めない） */
-export const PLAY_HISTORY_MAX_PAST = 50;
 
 /**
  * プレイ中の盤面の undo / redo 履歴。
@@ -33,11 +32,7 @@ export class PlayHistory {
   recordNext(next: SudokuGrid): PlayHistory {
     if (next === this.present) return this;
     const past = [...this.past, this.present];
-    const trimmed =
-      past.length > PLAY_HISTORY_MAX_PAST
-        ? past.slice(-PLAY_HISTORY_MAX_PAST)
-        : past;
-    return new PlayHistory(trimmed, next, []);
+    return new PlayHistory(past, next, []);
   }
 
   undo(): PlayHistory {
@@ -52,10 +47,6 @@ export class PlayHistory {
     if (!this.canRedo) return this;
     const [next, ...futureRest] = this.future;
     const past = [...this.past, this.present];
-    const trimmed =
-      past.length > PLAY_HISTORY_MAX_PAST
-        ? past.slice(-PLAY_HISTORY_MAX_PAST)
-        : past;
-    return new PlayHistory(trimmed, next, futureRest);
+    return new PlayHistory(past, next, futureRest);
   }
 }
