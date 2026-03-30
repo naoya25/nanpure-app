@@ -2,5 +2,6 @@
     "cSpell.words": [
         "logomark",
         "nanpure"
-    ]
+    ],
+    "css.lint.unknownAtRules": "ignore"
 }
