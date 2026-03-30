@@ -143,7 +143,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       if (!result) return;
 
       const next = result.grid;
-      const nh = h.recordNext(next);
+      const nh = h.recordNext(next, techniqueId);
       setHistory(nh);
 
       const nextValues = next.values();
@@ -198,7 +198,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
 
     let nh = h;
     for (const step of steps) {
-      nh = nh.recordNext(step.grid);
+      nh = nh.recordNext(step.grid, step.techniqueId);
     }
     setHistory(nh);
 
@@ -378,6 +378,11 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
           solution81={puzzle.solution_81}
           techniqueHighlightedCells={techniqueHighlightedCells}
         />
+        {history.presentTechniqueId ? (
+          <p className="mt-2 text-center text-xs text-zinc-500">
+            technique: {history.presentTechniqueId}
+          </p>
+        ) : null}
         <ControlPad
           digitComplete={digitComplete}
           onApplyDigit={applyDigit}
