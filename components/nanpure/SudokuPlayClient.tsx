@@ -55,6 +55,9 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
   const [phase, setPhase] = useState<"playing" | "result">("playing");
   const [won, setWon] = useState<boolean | null>(null);
   const [showTechniqueList, setShowTechniqueList] = useState(false);
+  const [techniqueHighlightedCells, setTechniqueHighlightedCells] = useState<
+    ReadonlySet<number> | null
+  >(null);
 
   const techniqueButtons = TECHNIQUE_BUTTONS;
 
@@ -105,6 +108,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       );
       const nh = h.recordNext(next);
       setHistory(nh);
+      setTechniqueHighlightedCells(null);
 
       if (!matchesSolution) {
         setMistakes((m) => m + 1);
@@ -137,6 +141,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
 
       const nextValues = next.values();
       const uniqueChangedCells = Array.from(new Set(result.cellIndex));
+      setTechniqueHighlightedCells(new Set(uniqueChangedCells));
       const mismatchCount = uniqueChangedCells.reduce((acc, idx) => {
         const expected = Number(puzzle.solution_81[idx] ?? 0);
         return acc + (nextValues[idx] === expected ? 0 : 1);
@@ -163,6 +168,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
     const h = historyRef.current;
     const nh = h.recordNext(h.present.clearCell(i));
     setHistory(nh);
+    setTechniqueHighlightedCells(null);
   }, [phase, selectedIndex, cellReadOnly]);
 
   const toggleMemoAtSelection = useCallback(
@@ -175,6 +181,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       if (h.present.cellAt(i).value !== 0) return;
       const nh = h.recordNext(h.present.toggleMemo(i, digit));
       setHistory(nh);
+      setTechniqueHighlightedCells(null);
     },
     [phase, selectedIndex, cellReadOnly],
   );
@@ -184,6 +191,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
     const h = historyRef.current;
     const nh = h.undo();
     setHistory(nh);
+    setTechniqueHighlightedCells(null);
   }, [phase]);
 
   const redo = useCallback(() => {
@@ -191,6 +199,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
     const h = historyRef.current;
     const nh = h.redo();
     setHistory(nh);
+    setTechniqueHighlightedCells(null);
   }, [phase]);
 
   useEffect(() => {
@@ -289,6 +298,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
           board={board}
           memoHighlightDigit={memoHighlightDigit}
           solution81={puzzle.solution_81}
+          techniqueHighlightedCells={techniqueHighlightedCells}
         />
         <ControlPad
           digitComplete={digitComplete}

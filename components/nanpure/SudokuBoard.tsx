@@ -99,16 +99,24 @@ function cellSurfaceClasses(
   readOnly: boolean,
   h: CellHighlight,
   incorrect: boolean,
+  techniqueHighlighted: boolean,
 ): string {
   if (h.selected) {
     return incorrect
       ? "relative z-10 bg-red-200 ring-2 ring-inset ring-blue-600"
-      : "relative z-10 bg-sky-200 ring-2 ring-inset ring-blue-600";
+      : techniqueHighlighted
+        ? "relative z-10 bg-amber-200 ring-2 ring-inset ring-blue-600"
+        : "relative z-10 bg-sky-200 ring-2 ring-inset ring-blue-600";
   }
   if (incorrect) {
     return readOnly
       ? "bg-red-100 text-red-900"
       : "bg-red-100 text-red-900 hover:bg-red-200";
+  }
+  if (techniqueHighlighted) {
+    return readOnly
+      ? "bg-amber-100 text-zinc-900"
+      : "bg-amber-100 text-zinc-900 hover:bg-amber-200";
   }
   if (h.digitMatch) {
     return readOnly
@@ -134,6 +142,7 @@ type SudokuBoardProps = {
   board: SudokuGrid;
   memoHighlightDigit: number | null;
   solution81: string;
+  techniqueHighlightedCells: ReadonlySet<number> | null;
 };
 
 export function SudokuBoard({
@@ -145,6 +154,7 @@ export function SudokuBoard({
   board,
   memoHighlightDigit,
   solution81,
+  techniqueHighlightedCells,
 }: SudokuBoardProps) {
   return (
     <div className="inline-block rounded-lg border-2 border-zinc-700 bg-white p-0.5 shadow-sm">
@@ -160,6 +170,7 @@ export function SudokuBoard({
           );
           const mask = board.cellAt(i).memoMask;
           const showMemo = value === 0 && mask !== 0;
+          const techniqueHighlighted = techniqueHighlightedCells?.has(i) ?? false;
           return (
             <button
               key={i}
@@ -175,7 +186,12 @@ export function SudokuBoard({
                   ? "text-xl leading-none sm:text-2xl sm:leading-none"
                   : "",
                 cellBorderClasses(i),
-                cellSurfaceClasses(readOnly, h, incorrect),
+                cellSurfaceClasses(
+                  readOnly,
+                  h,
+                  incorrect,
+                  techniqueHighlighted,
+                ),
               ].join(" ")}
             >
               {showMemo ? (

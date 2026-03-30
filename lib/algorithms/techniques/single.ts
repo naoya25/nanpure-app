@@ -8,10 +8,9 @@ import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
 
 /** シングル（候補が 1 つだけの空マス）があればその 1 手（先頭のマス 1 のみ） */
 export function trySingleStep(grid: SudokuGrid): TechniqueApplyResult | null {
-  // 1周だけ走査し、その周回で見つかった手をすべて適用して返す。
+  // 1周だけ走査し、元の盤だけを見て手を収集してから最後に一括適用する。
   const values = [...grid.values()];
-  let nextGrid = grid;
-  const changedCells: number[] = [];
+  const opsByCell = new Map<number, number>();
   for (let i = 0; i < 81; i++) {
     if (values[i] !== 0) continue;
 
@@ -27,7 +26,7 @@ export function trySingleStep(grid: SudokuGrid): TechniqueApplyResult | null {
 
     // もし memo が存在しているなら、矛盾しないように候補集合を交差させる。
     let candidateMask = ALL_CANDIDATE_BITS & ~usedMask;
-    const memoMask = nextGrid.cellAt(i).memoMask;
+    const memoMask = grid.cellAt(i).memoMask;
     if (memoMask !== 0) candidateMask &= memoMask;
 
     if (popcount9(candidateMask) !== 1) continue;
@@ -41,13 +40,24 @@ export function trySingleStep(grid: SudokuGrid): TechniqueApplyResult | null {
       }
     }
 
+    const existing = opsByCell.get(i);
+    if (existing !== undefined && existing !== digit) {
+      continue;
+    }
+    opsByCell.set(i, digit);
+  }
+  if (opsByCell.size === 0) return null;
+
+  let nextGrid = grid;
+  const changedCells: number[] = [];
+  for (const [cellIndex, digit] of opsByCell) {
     const before = nextGrid;
-    nextGrid = nextGrid.placeDigit(i, digit).next;
+    nextGrid = nextGrid.placeDigit(cellIndex, digit).next;
     if (nextGrid !== before) {
-      values[i] = digit;
-      changedCells.push(i);
+      changedCells.push(cellIndex);
     }
   }
+
   if (changedCells.length === 0) return null;
   return { cellIndex: changedCells, grid: nextGrid };
 }

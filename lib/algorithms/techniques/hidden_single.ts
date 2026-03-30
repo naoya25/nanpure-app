@@ -38,11 +38,10 @@ function tryUnit(
 export function tryHiddenSingleStep(
   grid: SudokuGrid,
 ): TechniqueApplyResult | null {
-  // 1周だけ走査し、その周回で見つかった手をすべて適用して返す。
-  let nextGrid = grid;
+  // 1周だけ走査し、元の盤だけを見て手を収集してから最後に一括適用する。
   const values = [...grid.values()];
-  const changedCells: number[] = [];
-  // `nextGrid` / `values` を都度参照し、memo がなくても盤面制約だけで候補を導出する。
+  const opsByCell = new Map<number, number>();
+  // 元の `grid` / `values` だけを参照し、memo がなくても盤面制約だけで候補を導出する。
   const getMask = (cellIndex: number) => {
     if (values[cellIndex] !== 0) return 0;
 
@@ -55,7 +54,7 @@ export function tryHiddenSingleStep(
     }
 
     let candidateMask = ALL_CANDIDATE_BITS & ~usedMask;
-    const memoMask = nextGrid.cellAt(cellIndex).memoMask;
+    const memoMask = grid.cellAt(cellIndex).memoMask;
     if (memoMask !== 0) candidateMask &= memoMask;
     return candidateMask;
   };
@@ -63,36 +62,42 @@ export function tryHiddenSingleStep(
   for (let r = 0; r < 9; r++) {
     const hit = tryUnit(values, getMask, sudokuRowCellIndices(r));
     if (!hit) continue;
-
-    const before = nextGrid;
-    nextGrid = nextGrid.placeDigit(hit.cellIndex, hit.digit).next;
-    if (nextGrid !== before) {
-      values[hit.cellIndex] = hit.digit;
-      changedCells.push(hit.cellIndex);
+    const existing = opsByCell.get(hit.cellIndex);
+    if (existing !== undefined && existing !== hit.digit) {
+      continue;
     }
+    opsByCell.set(hit.cellIndex, hit.digit);
   }
 
   for (let c = 0; c < 9; c++) {
     const hit = tryUnit(values, getMask, sudokuColCellIndices(c));
     if (!hit) continue;
-
-    const before = nextGrid;
-    nextGrid = nextGrid.placeDigit(hit.cellIndex, hit.digit).next;
-    if (nextGrid !== before) {
-      values[hit.cellIndex] = hit.digit;
-      changedCells.push(hit.cellIndex);
+    const existing = opsByCell.get(hit.cellIndex);
+    if (existing !== undefined && existing !== hit.digit) {
+      continue;
     }
+    opsByCell.set(hit.cellIndex, hit.digit);
   }
 
   for (let b = 0; b < 9; b++) {
     const hit = tryUnit(values, getMask, sudokuBlockCellIndices(b));
     if (!hit) continue;
+    const existing = opsByCell.get(hit.cellIndex);
+    if (existing !== undefined && existing !== hit.digit) {
+      continue;
+    }
+    opsByCell.set(hit.cellIndex, hit.digit);
+  }
 
+  if (opsByCell.size === 0) return null;
+
+  let nextGrid = grid;
+  const changedCells: number[] = [];
+  for (const [cellIndex, digit] of opsByCell) {
     const before = nextGrid;
-    nextGrid = nextGrid.placeDigit(hit.cellIndex, hit.digit).next;
+    nextGrid = nextGrid.placeDigit(cellIndex, digit).next;
     if (nextGrid !== before) {
-      values[hit.cellIndex] = hit.digit;
-      changedCells.push(hit.cellIndex);
+      changedCells.push(cellIndex);
     }
   }
 

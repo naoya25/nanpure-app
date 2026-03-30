@@ -42,40 +42,48 @@ function tryUnit(
 export function tryFullHouseStep(
   grid: SudokuGrid,
 ): TechniqueApplyResult | null {
-  // 1周だけ走査し、その周回で見つかった手をすべて適用して返す。
+  // 1周だけ走査し、元の盤だけを見て手を収集してから最後に一括適用する。
   const values = [...grid.values()];
-  let nextGrid = grid;
-  const changedCells: number[] = [];
+  const opsByCell = new Map<number, number>();
   for (let r = 0; r < 9; r++) {
     const op = tryUnit(values, sudokuRowCellIndices(r));
     if (!op) continue;
-    const before = nextGrid;
-    nextGrid = nextGrid.placeDigit(op.cellIndex, op.digit).next;
-    if (nextGrid !== before) {
-      values[op.cellIndex] = op.digit;
-      changedCells.push(op.cellIndex);
+    const existing = opsByCell.get(op.cellIndex);
+    if (existing !== undefined && existing !== op.digit) {
+      continue;
     }
+    opsByCell.set(op.cellIndex, op.digit);
   }
   for (let c = 0; c < 9; c++) {
     const op = tryUnit(values, sudokuColCellIndices(c));
     if (!op) continue;
-    const before = nextGrid;
-    nextGrid = nextGrid.placeDigit(op.cellIndex, op.digit).next;
-    if (nextGrid !== before) {
-      values[op.cellIndex] = op.digit;
-      changedCells.push(op.cellIndex);
+    const existing = opsByCell.get(op.cellIndex);
+    if (existing !== undefined && existing !== op.digit) {
+      continue;
     }
+    opsByCell.set(op.cellIndex, op.digit);
   }
   for (let b = 0; b < 9; b++) {
     const op = tryUnit(values, sudokuBlockCellIndices(b));
     if (!op) continue;
+    const existing = opsByCell.get(op.cellIndex);
+    if (existing !== undefined && existing !== op.digit) {
+      continue;
+    }
+    opsByCell.set(op.cellIndex, op.digit);
+  }
+  if (opsByCell.size === 0) return null;
+
+  let nextGrid = grid;
+  const changedCells: number[] = [];
+  for (const [cellIndex, digit] of opsByCell) {
     const before = nextGrid;
-    nextGrid = nextGrid.placeDigit(op.cellIndex, op.digit).next;
+    nextGrid = nextGrid.placeDigit(cellIndex, digit).next;
     if (nextGrid !== before) {
-      values[op.cellIndex] = op.digit;
-      changedCells.push(op.cellIndex);
+      changedCells.push(cellIndex);
     }
   }
+
   if (changedCells.length === 0) return null;
   return { cellIndex: changedCells, grid: nextGrid };
 }
