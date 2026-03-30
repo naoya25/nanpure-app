@@ -1,5 +1,7 @@
-import type { TechniqueDescriptor } from "@/lib/models/sudoku_technique_runner";
-import type { TechniqueId } from "@/lib/types/sudoku_technique_types";
+import type {
+  TechniqueDescriptor,
+  TechniqueId,
+} from "@/lib/types/sudoku_technique_types";
 
 type TechniquePopoverProps = {
   open: boolean;

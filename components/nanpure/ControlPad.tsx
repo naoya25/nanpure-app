@@ -3,8 +3,7 @@ import { PlayIcon } from "@/components/icons/play-icon";
 import { RedoIcon } from "@/components/icons/redo-icon";
 import { UndoIcon } from "@/components/icons/undo-icon";
 import { TechniquePopover } from "@/components/nanpure/TechniquePopover";
-import type { TechniqueDescriptor } from "@/lib/models/sudoku_technique_runner";
-import type { TechniqueId } from "@/lib/types/sudoku_technique_types";
+import type { TechniqueDescriptor, TechniqueId } from "@/lib/types/sudoku_technique_types";
 
 type ControlPadProps = {
   digitComplete: readonly boolean[];

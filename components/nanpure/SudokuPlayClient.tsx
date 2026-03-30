@@ -7,12 +7,12 @@ import { ControlPad } from "@/components/nanpure/ControlPad";
 import { SudokuBoard } from "@/components/nanpure/SudokuBoard";
 import { PlayHistory } from "@/lib/models/play_history";
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
+import { runTechniqueStep } from "@/lib/models/sudoku_technique_runner";
+import { parsePuzzle81 } from "@/lib/validates/grid";
 import {
   TECHNIQUE_BUTTONS,
-  runTechniqueStep,
-} from "@/lib/models/sudoku_technique_runner";
-import { parsePuzzle81 } from "@/lib/validates/grid";
-import type { TechniqueId } from "@/lib/types/sudoku_technique_types";
+  type TechniqueId,
+} from "@/lib/types/sudoku_technique_types";
 import {
   isBoardComplete,
   isBoardMatchingSolution,
@@ -55,9 +55,8 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
   const [phase, setPhase] = useState<"playing" | "result">("playing");
   const [won, setWon] = useState<boolean | null>(null);
   const [showTechniqueList, setShowTechniqueList] = useState(false);
-  const [techniqueHighlightedCells, setTechniqueHighlightedCells] = useState<
-    ReadonlySet<number> | null
-  >(null);
+  const [techniqueHighlightedCells, setTechniqueHighlightedCells] =
+    useState<ReadonlySet<number> | null>(null);
 
   const techniqueButtons = TECHNIQUE_BUTTONS;
 

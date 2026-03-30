@@ -8,17 +8,6 @@ import { tryFullHouseStep } from "@/lib/algorithms/techniques/full_house";
 import { tryHiddenSingleStep } from "@/lib/algorithms/techniques/hidden_single";
 import { trySingleStep } from "@/lib/algorithms/techniques/single";
 
-export type TechniqueDescriptor = {
-  id: TechniqueId;
-  label: string;
-};
-
-export const TECHNIQUE_BUTTONS = [
-  { id: TechniqueId.FULL_HOUSE, label: "フルハウス" },
-  { id: TechniqueId.SINGLE, label: "シングル" },
-  { id: TechniqueId.HIDDEN_SINGLE, label: "隠れシングル" },
-] as const satisfies readonly TechniqueDescriptor[];
-
 type TryTechnique = (grid: SudokuGrid) => TechniqueApplyResult | null;
 
 const TRY_BY_ID: Record<TechniqueId, TryTechnique> = {
