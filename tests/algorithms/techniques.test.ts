@@ -16,6 +16,10 @@ function makeGrid(values81: string, candidateMasks81: number[]) {
   );
 }
 
+function collectMemoMasks(grid: SudokuGrid): number[] {
+  return Array.from({ length: 81 }, (_, i) => grid.cellAt(i).memoMask);
+}
+
 describe("algorithms/techniques", () => {
   it("user-provided technique cases", () => {
     for (const c of TECHNIQUE_CASES) {
@@ -29,12 +33,13 @@ describe("algorithms/techniques", () => {
 
       expect(res).not.toBeNull();
 
-      // 盤面のみを検証
-      // TODO: 候補ビットマスクも検証する
       const out = res!.grid;
       const outValues = out.values();
-      const expectedValues = parsePuzzle81(c.expected).values;
+      const expectedValues = parsePuzzle81(c.expected.values81).values;
       expect(outValues).toEqual(expectedValues);
+
+      const outMemoMasks = collectMemoMasks(out);
+      expect(outMemoMasks).toEqual(c.expected.candidateMasks81);
     }
   });
 });

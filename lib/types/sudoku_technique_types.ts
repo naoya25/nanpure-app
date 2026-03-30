@@ -5,6 +5,7 @@ export enum TechniqueId {
   FULL_HOUSE = "FULL_HOUSE",
   SINGLE = "SINGLE",
   HIDDEN_SINGLE = "HIDDEN_SINGLE",
+  PENCIL_MARK = "PENCIL_MARK",
 }
 
 export type TechniqueDescriptor = {
@@ -16,6 +17,7 @@ export const TECHNIQUE_BUTTONS = [
   { id: TechniqueId.FULL_HOUSE, label: "フルハウス" },
   { id: TechniqueId.SINGLE, label: "シングル" },
   { id: TechniqueId.HIDDEN_SINGLE, label: "隠れシングル" },
+  { id: TechniqueId.PENCIL_MARK, label: "ペンシルマーク" },
 ] as const satisfies readonly TechniqueDescriptor[];
 
 export type TechniqueStepResult =

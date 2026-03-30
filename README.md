@@ -52,3 +52,4 @@ npm run create-puzzle -- --count=5
 - 電波なくても遊べるようにしたい
   - でもweb版なので難しいか、、
 - PlayHistoryにテクニック適用履歴を保存する
+- testを実行する Actions を作成する
