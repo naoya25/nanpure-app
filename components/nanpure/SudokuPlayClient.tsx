@@ -1,9 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 
 import { ClearSelectionIcon } from "@/components/icons/clear-selection-icon";
+import { RedoIcon } from "@/components/icons/redo-icon";
+import { UndoIcon } from "@/components/icons/undo-icon";
+import { PlayHistory } from "@/lib/models/play_history";
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import { parsePuzzle81 } from "@/lib/validates/grid";
 import {
@@ -166,11 +175,19 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
     [puzzle.puzzle_81],
   );
 
-  const [board, setBoard] = useState(() => SudokuGrid.fromValues(seedValues));
+  const [history, setHistory] = useState(() =>
+    PlayHistory.create(SudokuGrid.fromValues(seedValues)),
+  );
+  const historyRef = useRef(history);
+  const board = history.present;
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [mistakes, setMistakes] = useState(0);
   const [phase, setPhase] = useState<"playing" | "result">("playing");
   const [won, setWon] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    historyRef.current = history;
+  }, [history]);
 
   const gridValues = useMemo(() => [...board.values()], [board]);
 
@@ -207,12 +224,14 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       if (digitComplete[digit]) return;
       if (selectedIndex === null || cellReadOnly[selectedIndex]) return;
       const i = selectedIndex;
-      const { next, matchesSolution } = board.placeDigit(
+      const h = historyRef.current;
+      const { next, matchesSolution } = h.present.placeDigit(
         i,
         digit,
         puzzle.solution_81,
       );
-      setBoard(next);
+      const nh = h.recordNext(next);
+      setHistory(nh);
 
       if (!matchesSolution) {
         setMistakes((m) => m + 1);
@@ -230,7 +249,6 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       digitComplete,
       selectedIndex,
       cellReadOnly,
-      board,
       puzzle.solution_81,
     ],
   );
@@ -239,7 +257,9 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
     if (phase !== "playing") return;
     if (selectedIndex === null || cellReadOnly[selectedIndex]) return;
     const i = selectedIndex;
-    setBoard((b) => b.clearCell(i));
+    const h = historyRef.current;
+    const nh = h.recordNext(h.present.clearCell(i));
+    setHistory(nh);
   }, [phase, selectedIndex, cellReadOnly]);
 
   const toggleMemoAtSelection = useCallback(
@@ -248,11 +268,27 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       if (digit < 1 || digit > 9) return;
       if (selectedIndex === null || cellReadOnly[selectedIndex]) return;
       const i = selectedIndex;
-      if (board.cellAt(i).value !== 0) return;
-      setBoard((b) => b.toggleMemo(i, digit));
+      const h = historyRef.current;
+      if (h.present.cellAt(i).value !== 0) return;
+      const nh = h.recordNext(h.present.toggleMemo(i, digit));
+      setHistory(nh);
     },
-    [phase, selectedIndex, cellReadOnly, board],
+    [phase, selectedIndex, cellReadOnly],
   );
+
+  const undo = useCallback(() => {
+    if (phase !== "playing") return;
+    const h = historyRef.current;
+    const nh = h.undo();
+    setHistory(nh);
+  }, [phase]);
+
+  const redo = useCallback(() => {
+    if (phase !== "playing") return;
+    const h = historyRef.current;
+    const nh = h.redo();
+    setHistory(nh);
+  }, [phase]);
 
   useEffect(() => {
     if (phase !== "playing") return;
@@ -422,7 +458,17 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
               </button>
             ))}
           </div>
-          <div className="flex justify-center">
+          <div className="flex items-center justify-center gap-2">
+            <button
+              type="button"
+              disabled={phase !== "playing" || !history.canUndo}
+              onClick={() => undo()}
+              title="一手戻る"
+              aria-label="一手戻る"
+              className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-50 text-zinc-700 active:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-100"
+            >
+              <UndoIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+            </button>
             <button
               type="button"
               disabled={
@@ -436,6 +482,16 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
               className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-50 text-zinc-700 active:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-100"
             >
               <ClearSelectionIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+            </button>
+            <button
+              type="button"
+              disabled={phase !== "playing" || !history.canRedo}
+              onClick={() => redo()}
+              title="一手進める"
+              aria-label="一手進める"
+              className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-50 text-zinc-700 active:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-100"
+            >
+              <RedoIcon className="h-5 w-5 sm:h-6 sm:w-6" />
             </button>
           </div>
         </div>
