@@ -201,6 +201,15 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
     setTechniqueHighlightedCells(null);
   }, [phase]);
 
+  const handleSelectIndex = useCallback((index: number) => {
+    setSelectedIndex(index);
+    setTechniqueHighlightedCells(null);
+  }, []);
+
+  const clearTechniqueHighlightOnFocus = useCallback(() => {
+    setTechniqueHighlightedCells(null);
+  }, []);
+
   useEffect(() => {
     if (phase !== "playing") return;
     const onKeyDown = (e: KeyboardEvent) => {
@@ -293,7 +302,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
           fixed={fixed}
           cellReadOnly={cellReadOnly}
           selectedIndex={selectedIndex}
-          setSelectedIndex={setSelectedIndex}
+          setSelectedIndex={handleSelectIndex}
           board={board}
           memoHighlightDigit={memoHighlightDigit}
           solution81={puzzle.solution_81}
@@ -319,6 +328,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
           onApplyTechnique={applyTechnique}
           techniqueButtons={techniqueButtons}
           isPlaying={phase === "playing"}
+          onFocusAnyControl={clearTechniqueHighlightOnFocus}
         />
       </div>
     </main>

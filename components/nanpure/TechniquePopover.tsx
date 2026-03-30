@@ -8,6 +8,7 @@ type TechniquePopoverProps = {
   techniques: readonly TechniqueDescriptor[];
   onClose: () => void;
   onApply: (techniqueId: TechniqueId) => void;
+  onFocusAnyControl: () => void;
 };
 
 export function TechniquePopover({
@@ -15,6 +16,7 @@ export function TechniquePopover({
   techniques,
   onClose,
   onApply,
+  onFocusAnyControl,
 }: TechniquePopoverProps) {
   if (!open) return null;
 
@@ -25,6 +27,7 @@ export function TechniquePopover({
         <button
           type="button"
           onClick={onClose}
+          onFocus={onFocusAnyControl}
           className="rounded-md border border-zinc-300 bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
         >
           閉じる
@@ -36,6 +39,7 @@ export function TechniquePopover({
             key={t.id}
             type="button"
             onClick={() => onApply(t.id)}
+            onFocus={onFocusAnyControl}
             className="rounded-md border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-100 active:bg-zinc-200 disabled:pointer-events-none disabled:opacity-40"
           >
             {t.label}
