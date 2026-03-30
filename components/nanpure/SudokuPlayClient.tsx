@@ -1,17 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { ClearSelectionIcon } from "@/components/icons/clear-selection-icon";
-import { RedoIcon } from "@/components/icons/redo-icon";
-import { UndoIcon } from "@/components/icons/undo-icon";
+import { ControlPad } from "@/components/nanpure/ControlPad";
+import { SudokuBoard } from "@/components/nanpure/SudokuBoard";
 import { PlayHistory } from "@/lib/models/play_history";
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import {
@@ -23,7 +16,6 @@ import type { TechniqueId } from "@/lib/types/sudoku_technique_types";
 import {
   isBoardComplete,
   isBoardMatchingSolution,
-  isCellMismatchingSolution,
   isEverySolutionCellForDigitFilled,
 } from "@/lib/validates/validate";
 
@@ -35,68 +27,6 @@ export type SudokuPlayPuzzle = {
   level: number;
 };
 
-function cellBorderClasses(index: number): string {
-  const row = Math.floor(index / 9);
-  const col = index % 9;
-  const parts: string[] = [];
-  if (col < 8) {
-    parts.push(
-      col % 3 === 2
-        ? "border-r-2 border-r-zinc-600"
-        : "border-r border-r-zinc-300",
-    );
-  }
-  if (row < 8) {
-    parts.push(
-      row % 3 === 2
-        ? "border-b-2 border-b-zinc-600"
-        : "border-b border-b-zinc-300",
-    );
-  }
-  return parts.join(" ");
-}
-
-type CellHighlight = {
-  selected: boolean;
-  /** 選択中マスに 1〜9 が入っているとき、同じ数字のマス */
-  digitMatch: boolean;
-  /** 選択マスと同じ行・列・3×3 ブロック */
-  inBand: boolean;
-};
-
-function cellHighlights(
-  index: number,
-  selectedIndex: number | null,
-  grid: readonly number[],
-): CellHighlight {
-  if (selectedIndex === null) {
-    return { selected: false, digitMatch: false, inBand: false };
-  }
-  const sr = Math.floor(selectedIndex / 9);
-  const sc = selectedIndex % 9;
-  const ri = Math.floor(index / 9);
-  const ci = index % 9;
-  const selected = index === selectedIndex;
-  const inBand =
-    ri === sr ||
-    ci === sc ||
-    (Math.floor(ri / 3) === Math.floor(sr / 3) &&
-      Math.floor(ci / 3) === Math.floor(sc / 3));
-  const sv = grid[selectedIndex];
-  const digitMatch = sv >= 1 && sv <= 9 && grid[index] === sv && !selected;
-  const inBandOnly = inBand && !selected;
-  return {
-    selected,
-    digitMatch,
-    inBand: inBandOnly,
-  };
-}
-
-function memoMaskHas(mask: number, digit: number): boolean {
-  if (digit < 1 || digit > 9) return false;
-  return (mask & (1 << (digit - 1))) !== 0;
-}
-
 /**
  * 数字行・テンキーの 1〜9。Shift で `e.key` が記号でも `code` の `Digit*` / `Numpad*` で拾う。
  */
@@ -107,71 +37,6 @@ function digitFromKeyboardEvent(e: KeyboardEvent): number | null {
   if (pad) return Number(pad[1]);
   if (e.key >= "1" && e.key <= "9") return Number(e.key);
   return null;
-}
-
-function CellMemoMarks({
-  mask,
-  highlightDigit,
-}: {
-  mask: number;
-  /** 選択中マスに 1〜9 があるとき、その数字に一致するメモ桁を太字にする */
-  highlightDigit: number | null;
-}) {
-  return (
-    <span className="pointer-events-none flex h-full min-h-0 w-full items-center justify-center px-0.5 py-0.5">
-      <span className="grid aspect-square h-full w-full max-h-full max-w-full grid-cols-3 grid-rows-3 place-items-center text-[0.58rem] leading-none sm:text-[0.68rem]">
-        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => {
-          const visible = memoMaskHas(mask, d);
-          const digitHighlight =
-            visible && highlightDigit !== null && d === highlightDigit;
-          return (
-            <span
-              key={d}
-              className={
-                visible
-                  ? digitHighlight
-                    ? "font-extrabold tabular-nums text-zinc-900"
-                    : "font-medium tabular-nums text-zinc-400"
-                  : "invisible tabular-nums"
-              }
-            >
-              {d}
-            </span>
-          );
-        })}
-      </span>
-    </span>
-  );
-}
-
-function cellSurfaceClasses(
-  readOnly: boolean,
-  h: CellHighlight,
-  incorrect: boolean,
-): string {
-  if (h.selected) {
-    return incorrect
-      ? "relative z-10 bg-red-200 ring-2 ring-inset ring-blue-600"
-      : "relative z-10 bg-sky-200 ring-2 ring-inset ring-blue-600";
-  }
-  if (incorrect) {
-    return readOnly
-      ? "bg-red-100 text-red-900"
-      : "bg-red-100 text-red-900 hover:bg-red-200";
-  }
-  if (h.digitMatch) {
-    return readOnly
-      ? "bg-sky-200 text-zinc-900"
-      : "bg-sky-100 text-zinc-900 hover:bg-sky-200";
-  }
-  if (h.inBand) {
-    return readOnly
-      ? "bg-sky-100 text-zinc-900"
-      : "bg-sky-50 text-zinc-900 hover:bg-sky-100";
-  }
-  return readOnly
-    ? "bg-zinc-100 text-zinc-900"
-    : "bg-white text-zinc-900 hover:bg-zinc-50";
 }
 
 export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
@@ -252,13 +117,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
         setWon(isBoardMatchingSolution(values, puzzle.solution_81));
       }
     },
-    [
-      phase,
-      digitComplete,
-      selectedIndex,
-      cellReadOnly,
-      puzzle.solution_81,
-    ],
+    [phase, digitComplete, selectedIndex, cellReadOnly, puzzle.solution_81],
   );
 
   const applyTechnique = useCallback(
@@ -403,17 +262,6 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
             ミス:{" "}
             <span className="font-semibold text-zinc-900">{mistakes}</span>
           </p>
-          <div className="mt-2 flex items-center justify-end">
-            <button
-              type="button"
-              onClick={() => setShowTechniqueList((v) => !v)}
-              aria-expanded={showTechniqueList ? "true" : undefined}
-              disabled={phase !== "playing"}
-              className="inline-flex items-center justify-center rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:pointer-events-none disabled:opacity-40"
-            >
-              実行
-            </button>
-          </div>
           <div className="mt-2 flex flex-col gap-1">
             <Link
               href="/play"
@@ -431,154 +279,38 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
         </div>
       </div>
 
-      {showTechniqueList ? (
-        <div className="mb-4 rounded-lg border border-zinc-200 bg-white p-3 shadow-sm">
-          <div className="mb-3 flex items-center justify-between gap-2">
-            <p className="text-sm font-semibold text-zinc-900">
-              テクニック一覧
-            </p>
-            <button
-              type="button"
-              onClick={() => setShowTechniqueList(false)}
-              className="rounded-md border border-zinc-300 bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
-            >
-              閉じる
-            </button>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {techniqueButtons.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => applyTechnique(t.id)}
-                className="rounded-md border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-100 active:bg-zinc-200 disabled:pointer-events-none disabled:opacity-40"
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
-        </div>
-      ) : null}
-
       <div className="play-surface-cursor">
-        <div className="inline-block rounded-lg border-2 border-zinc-700 bg-white p-0.5 shadow-sm">
-          <div className="grid grid-cols-9">
-            {gridValues.map((value, i) => {
-              const readOnly = cellReadOnly[i];
-              const h = cellHighlights(i, selectedIndex, gridValues);
-              const incorrect = isCellMismatchingSolution(
-                i,
-                gridValues,
-                puzzle.solution_81,
-                fixed,
-              );
-              const mask = board.cellAt(i).memoMask;
-              const showMemo = value === 0 && mask !== 0;
-              return (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => setSelectedIndex(i)}
-                  aria-current={h.selected ? "true" : undefined}
-                  className={[
-                    "flex h-9 w-9 font-medium sm:h-10 sm:w-10",
-                    showMemo
-                      ? "items-stretch p-0"
-                      : "items-center justify-center p-0",
-                    !showMemo && value !== 0
-                      ? "text-xl leading-none sm:text-2xl sm:leading-none"
-                      : "",
-                    cellBorderClasses(i),
-                    cellSurfaceClasses(readOnly, h, incorrect),
-                  ].join(" ")}
-                >
-                  {showMemo ? (
-                    <CellMemoMarks
-                      mask={mask}
-                      highlightDigit={memoHighlightDigit}
-                    />
-                  ) : value === 0 ? (
-                    ""
-                  ) : (
-                    value
-                  )}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        <div className="mt-6 flex flex-col gap-3">
-          <div className="flex w-full max-w-full flex-nowrap items-stretch gap-0.5 sm:gap-1">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => {
-              const done = digitComplete[n];
-              return (
-                <button
-                  key={n}
-                  type="button"
-                  disabled={done}
-                  onClick={() => applyDigit(n)}
-                  className={[
-                    "flex min-h-11 min-w-0 flex-1 basis-0 touch-manipulation items-center justify-center rounded-md text-lg font-semibold sm:min-h-12 sm:text-xl",
-                    done
-                      ? "pointer-events-none invisible"
-                      : "text-zinc-900 active:bg-zinc-100 sm:hover:bg-zinc-50",
-                  ].join(" ")}
-                >
-                  {n}
-                </button>
-              );
-            })}
-          </div>
-          <div className="flex w-full max-w-full flex-nowrap items-stretch gap-0.5 sm:gap-1">
-            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
-              <button
-                key={n}
-                type="button"
-                onClick={() => toggleMemoAtSelection(n)}
-                className="flex min-h-11 min-w-0 flex-1 basis-0 touch-manipulation items-center justify-center rounded-md text-lg font-semibold text-zinc-500 active:bg-zinc-100 sm:min-h-12 sm:text-xl sm:hover:bg-zinc-50"
-              >
-                {n}
-              </button>
-            ))}
-          </div>
-          <div className="flex items-center justify-center gap-2">
-            <button
-              type="button"
-              disabled={phase !== "playing" || !history.canUndo}
-              onClick={() => undo()}
-              title="一手戻る"
-              aria-label="一手戻る"
-              className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-50 text-zinc-700 active:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-100"
-            >
-              <UndoIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-            </button>
-            <button
-              type="button"
-              disabled={
-                selectedIndex === null ||
-                cellReadOnly[selectedIndex] ||
-                phase !== "playing"
-              }
-              onClick={() => clearCell()}
-              title="選択中のマスの数字とメモを消す（Backspace でも可）"
-              aria-label="選択中のマスの数字とメモを消す"
-              className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-50 text-zinc-700 active:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-100"
-            >
-              <ClearSelectionIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-            </button>
-            <button
-              type="button"
-              disabled={phase !== "playing" || !history.canRedo}
-              onClick={() => redo()}
-              title="一手進める"
-              aria-label="一手進める"
-              className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-50 text-zinc-700 active:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-100"
-            >
-              <RedoIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-            </button>
-          </div>
-        </div>
+        <SudokuBoard
+          gridValues={gridValues}
+          fixed={fixed}
+          cellReadOnly={cellReadOnly}
+          selectedIndex={selectedIndex}
+          setSelectedIndex={setSelectedIndex}
+          board={board}
+          memoHighlightDigit={memoHighlightDigit}
+          solution81={puzzle.solution_81}
+        />
+        <ControlPad
+          digitComplete={digitComplete}
+          onApplyDigit={applyDigit}
+          onToggleMemo={toggleMemoAtSelection}
+          canUndo={history.canUndo}
+          canRedo={history.canRedo}
+          canClearCell={
+            selectedIndex !== null &&
+            !cellReadOnly[selectedIndex] &&
+            phase === "playing"
+          }
+          onUndo={undo}
+          onRedo={redo}
+          onClearCell={clearCell}
+          showTechniqueList={showTechniqueList}
+          onToggleTechniqueList={() => setShowTechniqueList((v) => !v)}
+          onCloseTechniqueList={() => setShowTechniqueList(false)}
+          onApplyTechnique={applyTechnique}
+          techniqueButtons={techniqueButtons}
+          isPlaying={phase === "playing"}
+        />
       </div>
     </main>
   );
