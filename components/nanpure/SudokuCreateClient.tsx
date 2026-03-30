@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { SudokuBoard } from "@/components/nanpure/SudokuBoard";
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
+import { parsePuzzle81 } from "@/lib/validates/grid";
 
 function digitFromKeyboardEvent(e: KeyboardEvent): number | null {
   const row = /^Digit([1-9])$/.exec(e.code);
@@ -21,6 +22,10 @@ export function SudokuCreateClient() {
   const [board, setBoard] = useState(() => SudokuGrid.fromValues(EMPTY_VALUES));
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [memoMode, setMemoMode] = useState(false);
+  const [values81Input, setValues81Input] = useState("");
+  const [values81InputError, setValues81InputError] = useState<string | null>(
+    null,
+  );
 
   const gridValues = useMemo(() => [...board.values()], [board]);
   const fixed = useMemo(() => Array<boolean>(81).fill(false), []);
@@ -70,7 +75,20 @@ export function SudokuCreateClient() {
   const clearAll = useCallback(() => {
     setBoard(SudokuGrid.fromValues(EMPTY_VALUES));
     setSelectedIndex(null);
+    setValues81InputError(null);
   }, []);
+
+  const applyValues81Input = useCallback(() => {
+    const normalized = values81Input.trim();
+    try {
+      const parsed = parsePuzzle81(normalized);
+      setBoard(SudokuGrid.fromValues(parsed.values));
+      setSelectedIndex(null);
+      setValues81InputError(null);
+    } catch {
+      setValues81InputError("81文字の 0〜9 で入力してください。");
+    }
+  }, [values81Input]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -166,6 +184,32 @@ export function SudokuCreateClient() {
       </div>
 
       <section className="mt-8 space-y-4">
+        <div>
+          <p className="mb-1 text-sm font-medium text-zinc-800">values81 を入力して反映</p>
+          <textarea
+            value={values81Input}
+            onChange={(e) => {
+              setValues81Input(e.target.value);
+              if (values81InputError !== null) setValues81InputError(null);
+            }}
+            placeholder="例: 005060008004007000000203000000030024000000900237040100140008060008001000000050003"
+            className="h-20 w-full rounded-md border border-zinc-300 bg-white p-2 font-mono text-xs text-zinc-800"
+          />
+          <div className="mt-2 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={applyValues81Input}
+              className="rounded-md border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+            >
+              盤面に反映
+            </button>
+            {values81InputError ? (
+              <p className="text-xs text-red-600">{values81InputError}</p>
+            ) : (
+              <p className="text-xs text-zinc-500">空マスは 0 を使います</p>
+            )}
+          </div>
+        </div>
         <div>
           <p className="mb-1 text-sm font-medium text-zinc-800">values81</p>
           <textarea
