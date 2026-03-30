@@ -10,6 +10,9 @@ export enum TechniqueId {
   MEMO_SINGLE = "MEMO_SINGLE",
   POINTING = "POINTING",
   BOX_LINE_REDUCTION = "BOX_LINE_REDUCTION",
+  PAIR = "PAIR",
+  TRIPLE = "TRIPLE",
+  QUAD = "QUAD",
 }
 
 export type TechniqueDescriptor = {
@@ -26,6 +29,9 @@ export const TECHNIQUE_LABELS = [
   { id: TechniqueId.MEMO_SINGLE, label: "メモ1確定" },
   { id: TechniqueId.POINTING, label: "ポインティング" },
   { id: TechniqueId.BOX_LINE_REDUCTION, label: "ボックス・ライン削減" },
+  { id: TechniqueId.PAIR, label: "ペア" },
+  { id: TechniqueId.TRIPLE, label: "トリプル" },
+  { id: TechniqueId.QUAD, label: "クァッド" },
 ] as const satisfies readonly TechniqueDescriptor[];
 
 export type TechniqueStepResult =

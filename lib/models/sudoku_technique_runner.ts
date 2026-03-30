@@ -13,6 +13,11 @@ import { tryPointingStep } from "@/lib/algorithms/techniques/pointing";
 import { tryBoxLineReductionStep } from "@/lib/algorithms/techniques/box_line_reduction";
 import { trySolutionSyncStep } from "@/lib/algorithms/techniques/solution_sync";
 import { trySingleStep } from "@/lib/algorithms/techniques/single";
+import {
+  tryPairStep,
+  tryQuadStep,
+  tryTripleStep,
+} from "@/lib/algorithms/techniques/subset";
 
 type TryTechnique = (
   grid: SudokuGrid,
@@ -28,6 +33,9 @@ const TRY_BY_ID: Record<TechniqueId, TryTechnique> = {
   [TechniqueId.MEMO_SINGLE]: tryMemoSingleStep,
   [TechniqueId.POINTING]: (grid) => tryPointingStep(grid),
   [TechniqueId.BOX_LINE_REDUCTION]: (grid) => tryBoxLineReductionStep(grid),
+  [TechniqueId.PAIR]: (grid) => tryPairStep(grid),
+  [TechniqueId.TRIPLE]: (grid) => tryTripleStep(grid),
+  [TechniqueId.QUAD]: (grid) => tryQuadStep(grid),
 };
 
 export function runTechniqueStep(
