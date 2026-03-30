@@ -3,6 +3,8 @@ import { TechniqueId } from "@/lib/types/sudoku_technique_types";
 export type TechniqueCaseBase = {
   name: string;
   techniqueId: TechniqueId;
+  /** `placeDigit` の正誤同期用。未指定なら論理確定のみ。 */
+  solution81?: string;
   input: {
     values81: string;
     candidateMasks81: number[];
@@ -68,6 +70,20 @@ export const TECHNIQUE_CASES: TechniqueCaseBase[] = [
       values81:
         "008007900042005000000600050003006801000000006900070000080130470000090000010000000",
       candidateMasks81: new Array(81).fill(0),
+    },
+    expected: {
+      values81:
+        "008007900042005000000600050003006801000000006900070000080132470000090000010000000",
+      candidateMasks81: new Array(81).fill(0),
+    },
+  },
+  {
+    name: "memoSingle 1",
+    techniqueId: TechniqueId.MEMO_SINGLE,
+    input: {
+      values81:
+        "008007900042005000000600050003006801000000006900070000080130470000090000010000000",
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => (i === 59 ? 2 : 0)),
     },
     expected: {
       values81:

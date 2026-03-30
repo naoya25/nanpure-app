@@ -6,7 +6,11 @@ import type { SudokuGrid } from "@/lib/models/sudoku_grid";
 import { sudokuPeerIndices } from "@/lib/validates/grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
 
-/** シングル（候補が 1 つだけの空マス）があればその 1 手（先頭のマス 1 のみ） */
+/**
+ * シングル（ピアの確定数字から候補を求め、そのマスで候補が 1 つだけの空マス）。
+ * メモがある空マスは、候補集合をメモと交差させたうえで 1 つなら確定。
+ * メモのみを見る確定は `tryMemoSingleStep`。
+ */
 export function trySingleStep(
   grid: SudokuGrid,
   solution81?: string,
