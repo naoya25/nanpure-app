@@ -24,7 +24,7 @@ describe("algorithms/techniques", () => {
   it("user-provided technique cases", () => {
     for (const c of TECHNIQUE_CASES) {
       const grid = makeGrid(c.input.values81, c.input.candidateMasks81);
-      const res = runTechniqueStep(grid, c.techniqueId);
+      const res = runTechniqueStep(grid, c.techniqueId, c.solution81);
 
       if (c.expected === null) {
         expect(res).toBeNull();

@@ -144,6 +144,19 @@ export class SudokuGrid {
     return this.withCell(index, { ...c, memoMask: c.memoMask ^ bit });
   }
 
+  /** 空マスにメモの数字を足す（該当ビットが既に立っていればそのまま） */
+  addMemoDigit(index: number, digit: number): SudokuGrid {
+    if (digit < 1 || digit > 9) return this;
+    const c = this.cells[index];
+    if (c.value !== 0) return this;
+    const bit = 1 << (digit - 1);
+    if ((c.memoMask & bit) !== 0) return this;
+    return this.withCell(index, {
+      ...c,
+      memoMask: (c.memoMask | bit) & 0x1ff,
+    });
+  }
+
   /** 論理 1 手の確定。空マスかつ（memo がある場合のみ）候補に digit が含まれること。 */
   private withDeducedDigit(index: number, digit: number): SudokuGrid {
     if (digit < 1 || digit > 9) return this;

@@ -7,8 +7,10 @@ import {
 
 import { tryFullHouseStep } from "@/lib/algorithms/techniques/full_house";
 import { tryHiddenSingleStep } from "@/lib/algorithms/techniques/hidden_single";
-import { trySingleStep } from "@/lib/algorithms/techniques/single";
 import { tryPencilMarkStep } from "@/lib/algorithms/techniques/pencil_mark";
+import { tryPointingStep } from "@/lib/algorithms/techniques/pointing";
+import { trySolutionSyncStep } from "@/lib/algorithms/techniques/solution_sync";
+import { trySingleStep } from "@/lib/algorithms/techniques/single";
 
 type TryTechnique = (
   grid: SudokuGrid,
@@ -19,7 +21,9 @@ const TRY_BY_ID: Record<TechniqueId, TryTechnique> = {
   [TechniqueId.FULL_HOUSE]: tryFullHouseStep,
   [TechniqueId.SINGLE]: trySingleStep,
   [TechniqueId.HIDDEN_SINGLE]: tryHiddenSingleStep,
+  [TechniqueId.SOLUTION_SYNC]: trySolutionSyncStep,
   [TechniqueId.PENCIL_MARK]: (grid) => tryPencilMarkStep(grid),
+  [TechniqueId.POINTING]: (grid) => tryPointingStep(grid),
 };
 
 export function runTechniqueStep(

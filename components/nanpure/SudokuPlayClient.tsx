@@ -77,8 +77,9 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
   useEffect(() => {
     if (process.env.NODE_ENV !== "development") return;
     const values81 = board.values().join("");
-    const candidateMasks81 = Array.from({ length: 81 }, (_, i) =>
-      board.cellAt(i).memoMask,
+    const candidateMasks81 = Array.from(
+      { length: 81 },
+      (_, i) => board.cellAt(i).memoMask,
     );
     console.log("[SudokuPlay debug] position", { values81, candidateMasks81 });
   }, [board]);
@@ -156,11 +157,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       const next = result.grid;
       const nextValues = next.values();
       const uniqueChangedCells = Array.from(new Set(result.cellIndex));
-      const nh = h.recordNext(
-        next,
-        result.historyTechniqueId ?? techniqueId,
-        uniqueChangedCells,
-      );
+      const nh = h.recordNext(next, techniqueId, uniqueChangedCells);
       setHistory(nh);
       setTechniqueHighlightedCells(new Set(uniqueChangedCells));
       const mismatchCount = uniqueChangedCells.reduce((acc, idx) => {
