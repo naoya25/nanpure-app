@@ -14,7 +14,12 @@ import { RedoIcon } from "@/components/icons/redo-icon";
 import { UndoIcon } from "@/components/icons/undo-icon";
 import { PlayHistory } from "@/lib/models/play_history";
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
+import {
+  TECHNIQUE_BUTTONS,
+  runTechniqueStep,
+} from "@/lib/models/sudoku_technique_runner";
 import { parsePuzzle81 } from "@/lib/validates/grid";
+import type { TechniqueId } from "@/lib/types/sudoku_technique_types";
 import {
   isBoardComplete,
   isBoardMatchingSolution,
@@ -184,6 +189,9 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
   const [mistakes, setMistakes] = useState(0);
   const [phase, setPhase] = useState<"playing" | "result">("playing");
   const [won, setWon] = useState<boolean | null>(null);
+  const [showTechniqueList, setShowTechniqueList] = useState(false);
+
+  const techniqueButtons = TECHNIQUE_BUTTONS;
 
   useEffect(() => {
     historyRef.current = history;
@@ -251,6 +259,42 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       cellReadOnly,
       puzzle.solution_81,
     ],
+  );
+
+  const applyTechnique = useCallback(
+    (techniqueId: TechniqueId) => {
+      if (phase !== "playing") return;
+
+      const h = historyRef.current;
+      const grid = h.present;
+
+      const result = runTechniqueStep(grid, techniqueId);
+
+      if (!result) return;
+
+      const next = result.grid;
+      const nh = h.recordNext(next);
+      setHistory(nh);
+
+      const nextValues = next.values();
+      const uniqueChangedCells = Array.from(new Set(result.cellIndex));
+      const mismatchCount = uniqueChangedCells.reduce((acc, idx) => {
+        const expected = Number(puzzle.solution_81[idx] ?? 0);
+        return acc + (nextValues[idx] === expected ? 0 : 1);
+      }, 0);
+      if (mismatchCount > 0) {
+        setMistakes((m) => m + mismatchCount);
+      }
+
+      if (isBoardComplete(nextValues)) {
+        setPhase("result");
+        setWon(isBoardMatchingSolution(nextValues, puzzle.solution_81));
+      }
+
+      // 適用できた場合だけ一覧を閉じる（適用なしなら次を選べるように）
+      setShowTechniqueList(false);
+    },
+    [phase, puzzle.solution_81],
   );
 
   const clearCell = useCallback(() => {
@@ -359,6 +403,17 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
             ミス:{" "}
             <span className="font-semibold text-zinc-900">{mistakes}</span>
           </p>
+          <div className="mt-2 flex items-center justify-end">
+            <button
+              type="button"
+              onClick={() => setShowTechniqueList((v) => !v)}
+              aria-expanded={showTechniqueList ? "true" : undefined}
+              disabled={phase !== "playing"}
+              className="inline-flex items-center justify-center rounded-md bg-zinc-900 px-3 py-1.5 text-sm font-medium text-white hover:bg-zinc-800 disabled:pointer-events-none disabled:opacity-40"
+            >
+              実行
+            </button>
+          </div>
           <div className="mt-2 flex flex-col gap-1">
             <Link
               href="/play"
@@ -375,6 +430,35 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
           </div>
         </div>
       </div>
+
+      {showTechniqueList ? (
+        <div className="mb-4 rounded-lg border border-zinc-200 bg-white p-3 shadow-sm">
+          <div className="mb-3 flex items-center justify-between gap-2">
+            <p className="text-sm font-semibold text-zinc-900">
+              テクニック一覧
+            </p>
+            <button
+              type="button"
+              onClick={() => setShowTechniqueList(false)}
+              className="rounded-md border border-zinc-300 bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
+            >
+              閉じる
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {techniqueButtons.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => applyTechnique(t.id)}
+                className="rounded-md border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-sm font-medium text-zinc-800 hover:bg-zinc-100 active:bg-zinc-200 disabled:pointer-events-none disabled:opacity-40"
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="play-surface-cursor">
         <div className="inline-block rounded-lg border-2 border-zinc-700 bg-white p-0.5 shadow-sm">
