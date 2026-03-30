@@ -113,7 +113,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
         digit,
         puzzle.solution_81,
       );
-      const nh = h.recordNext(next);
+      const nh = h.recordNext(next, null, [i]);
       setHistory(nh);
       setTechniqueHighlightedCells(null);
 
@@ -143,11 +143,10 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       if (!result) return;
 
       const next = result.grid;
-      const nh = h.recordNext(next, techniqueId);
-      setHistory(nh);
-
       const nextValues = next.values();
       const uniqueChangedCells = Array.from(new Set(result.cellIndex));
+      const nh = h.recordNext(next, techniqueId, uniqueChangedCells);
+      setHistory(nh);
       setTechniqueHighlightedCells(new Set(uniqueChangedCells));
       const mismatchCount = uniqueChangedCells.reduce((acc, idx) => {
         const expected = Number(puzzle.solution_81[idx] ?? 0);
@@ -199,7 +198,11 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
 
     let nh = h;
     for (const step of steps) {
-      nh = nh.recordNext(step.grid, step.techniqueId);
+      nh = nh.recordNext(
+        step.grid,
+        step.techniqueId,
+        Array.from(new Set(step.cellIndex)),
+      );
     }
     setHistory(nh);
 
@@ -236,7 +239,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
     if (selectedIndex === null || cellReadOnly[selectedIndex]) return;
     const i = selectedIndex;
     const h = historyRef.current;
-    const nh = h.recordNext(h.present.clearCell(i));
+    const nh = h.recordNext(h.present.clearCell(i), null, [i]);
     setHistory(nh);
     setTechniqueHighlightedCells(null);
   }, [phase, selectedIndex, cellReadOnly]);
@@ -249,7 +252,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       const i = selectedIndex;
       const h = historyRef.current;
       if (h.present.cellAt(i).value !== 0) return;
-      const nh = h.recordNext(h.present.toggleMemo(i, digit));
+      const nh = h.recordNext(h.present.toggleMemo(i, digit), null, [i]);
       setHistory(nh);
       setTechniqueHighlightedCells(null);
     },
@@ -259,9 +262,10 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
   const undo = useCallback(() => {
     if (phase !== "playing") return;
     const h = historyRef.current;
+    const changed = h.presentCellIndex;
     const nh = h.undo();
     setHistory(nh);
-    setTechniqueHighlightedCells(null);
+    setTechniqueHighlightedCells(changed ? new Set(changed) : null);
   }, [phase]);
 
   const redo = useCallback(() => {
@@ -269,7 +273,9 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
     const h = historyRef.current;
     const nh = h.redo();
     setHistory(nh);
-    setTechniqueHighlightedCells(null);
+    setTechniqueHighlightedCells(
+      nh.presentCellIndex ? new Set(nh.presentCellIndex) : null,
+    );
   }, [phase]);
 
   const handleSelectIndex = useCallback((index: number) => {

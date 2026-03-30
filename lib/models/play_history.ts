@@ -4,6 +4,7 @@ import type { TechniqueId } from "@/lib/types/sudoku_technique_types";
 export type PlayHistoryEntry = {
   grid: SudokuGrid;
   techniqueId: TechniqueId | null;
+  cellIndex: readonly number[] | null;
 };
 
 /** undo スタックに積む最大件数（現在の盤は含めない） */
@@ -20,7 +21,11 @@ export class PlayHistory {
   ) {}
 
   static create(initial: SudokuGrid): PlayHistory {
-    return new PlayHistory([], { grid: initial, techniqueId: null }, []);
+    return new PlayHistory(
+      [],
+      { grid: initial, techniqueId: null, cellIndex: null },
+      [],
+    );
   }
 
   get present(): SudokuGrid {
@@ -29,6 +34,10 @@ export class PlayHistory {
 
   get presentTechniqueId(): TechniqueId | null {
     return this.presentEntry.techniqueId;
+  }
+
+  get presentCellIndex(): readonly number[] | null {
+    return this.presentEntry.cellIndex;
   }
 
   get canUndo(): boolean {
@@ -43,10 +52,14 @@ export class PlayHistory {
    * 操作後の盤を反映する。`next === present` のときは履歴を増やさない。
    * 新しい操作が入ったら redo 用スタックは破棄する。
    */
-  recordNext(next: SudokuGrid, techniqueId: TechniqueId | null = null): PlayHistory {
+  recordNext(
+    next: SudokuGrid,
+    techniqueId: TechniqueId | null = null,
+    cellIndex: readonly number[] | null = null,
+  ): PlayHistory {
     if (next === this.present) return this;
     const past = [...this.past, this.presentEntry];
-    return new PlayHistory(past, { grid: next, techniqueId }, []);
+    return new PlayHistory(past, { grid: next, techniqueId, cellIndex }, []);
   }
 
   undo(): PlayHistory {
