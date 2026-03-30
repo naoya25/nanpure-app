@@ -9,6 +9,7 @@ import { tryFullHouseStep } from "@/lib/algorithms/techniques/full_house";
 import { tryHiddenSingleStep } from "@/lib/algorithms/techniques/hidden_single";
 import { tryPencilMarkStep } from "@/lib/algorithms/techniques/pencil_mark";
 import { tryPointingStep } from "@/lib/algorithms/techniques/pointing";
+import { tryBoxLineReductionStep } from "@/lib/algorithms/techniques/box_line_reduction";
 import { trySolutionSyncStep } from "@/lib/algorithms/techniques/solution_sync";
 import { trySingleStep } from "@/lib/algorithms/techniques/single";
 
@@ -24,6 +25,7 @@ const TRY_BY_ID: Record<TechniqueId, TryTechnique> = {
   [TechniqueId.SOLUTION_SYNC]: trySolutionSyncStep,
   [TechniqueId.PENCIL_MARK]: (grid) => tryPencilMarkStep(grid),
   [TechniqueId.POINTING]: (grid) => tryPointingStep(grid),
+  [TechniqueId.BOX_LINE_REDUCTION]: (grid) => tryBoxLineReductionStep(grid),
 };
 
 export function runTechniqueStep(

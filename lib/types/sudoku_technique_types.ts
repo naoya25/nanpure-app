@@ -8,6 +8,7 @@ export enum TechniqueId {
   SOLUTION_SYNC = "SOLUTION_SYNC",
   PENCIL_MARK = "PENCIL_MARK",
   POINTING = "POINTING",
+  BOX_LINE_REDUCTION = "BOX_LINE_REDUCTION",
 }
 
 export type TechniqueDescriptor = {
@@ -22,6 +23,7 @@ export const TECHNIQUE_LABELS = [
   { id: TechniqueId.SOLUTION_SYNC, label: "正解同期" },
   { id: TechniqueId.PENCIL_MARK, label: "ペンシルマーク" },
   { id: TechniqueId.POINTING, label: "ポインティング" },
+  { id: TechniqueId.BOX_LINE_REDUCTION, label: "ボックス・ライン削減" },
 ] as const satisfies readonly TechniqueDescriptor[];
 
 export type TechniqueStepResult =
