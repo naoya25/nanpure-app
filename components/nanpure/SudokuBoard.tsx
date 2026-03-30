@@ -143,6 +143,8 @@ type SudokuBoardProps = {
   memoHighlightDigit: number | null;
   solution81?: string;
   techniqueHighlightedCells: ReadonlySet<number> | null;
+  /** true のときセルをクリック・フォーカスできない（振り返り再生など） */
+  interactionDisabled?: boolean;
 };
 
 export function SudokuBoard({
@@ -155,6 +157,7 @@ export function SudokuBoard({
   memoHighlightDigit,
   solution81,
   techniqueHighlightedCells,
+  interactionDisabled = false,
 }: SudokuBoardProps) {
   return (
     <div className="inline-block rounded-lg border-2 border-zinc-700 bg-white p-0.5 shadow-sm">
@@ -168,40 +171,40 @@ export function SudokuBoard({
               : false;
           const mask = board.cellAt(i).memoMask;
           const showMemo = value === 0 && mask !== 0;
-          const techniqueHighlighted = techniqueHighlightedCells?.has(i) ?? false;
+          const techniqueHighlighted =
+            techniqueHighlightedCells?.has(i) ?? false;
+          const commonClass = [
+            "flex h-9 w-9 font-medium sm:h-10 sm:w-10",
+            showMemo ? "items-stretch p-0" : "items-center justify-center p-0",
+            !showMemo && value !== 0
+              ? "text-xl leading-none sm:text-2xl sm:leading-none"
+              : "",
+            cellBorderClasses(i),
+            cellSurfaceClasses(readOnly, h, incorrect, techniqueHighlighted),
+          ].join(" ");
+          const children = showMemo ? (
+            <CellMemoMarks mask={mask} highlightDigit={memoHighlightDigit} />
+          ) : value === 0 ? (
+            ""
+          ) : (
+            value
+          );
+          if (interactionDisabled) {
+            return (
+              <div key={i} className={commonClass} aria-hidden>
+                {children}
+              </div>
+            );
+          }
           return (
             <button
               key={i}
               type="button"
               onClick={() => setSelectedIndex(i)}
               aria-current={h.selected ? "true" : undefined}
-              className={[
-                "flex h-9 w-9 font-medium sm:h-10 sm:w-10",
-                showMemo
-                  ? "items-stretch p-0"
-                  : "items-center justify-center p-0",
-                !showMemo && value !== 0
-                  ? "text-xl leading-none sm:text-2xl sm:leading-none"
-                  : "",
-                cellBorderClasses(i),
-                cellSurfaceClasses(
-                  readOnly,
-                  h,
-                  incorrect,
-                  techniqueHighlighted,
-                ),
-              ].join(" ")}
+              className={commonClass}
             >
-              {showMemo ? (
-                <CellMemoMarks
-                  mask={mask}
-                  highlightDigit={memoHighlightDigit}
-                />
-              ) : value === 0 ? (
-                ""
-              ) : (
-                value
-              )}
+              {children}
             </button>
           );
         })}
