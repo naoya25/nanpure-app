@@ -735,7 +735,7 @@ export const TECHNIQUE_CASES: TechniqueCaseBase[] = [
         if (r === 0 && c === 0) return 1; // {1}
         if (r === 0 && c === 4) return 258;
         if (r === 4 && c === 4) return 260;
-        if (r === 4 && c === 1) return 264;
+        if (r === 4 && c === 1) return 8;
         if (r === 1 && c === 1) return 272;
         if (r === 2 && c === 2) return 288;
         if (r === 0 && c === 8) return 320;
@@ -745,7 +745,7 @@ export const TECHNIQUE_CASES: TechniqueCaseBase[] = [
     },
   },
   {
-    name: "xCycle 2 (synthetic / continuous weak edge in block0, elim block peers)",
+    name: "xCycle 2 (synthetic / continuous, weak block links eliminate peers)",
     techniqueId: TechniqueId.X_CYCLE,
     input: {
       values81: "0".repeat(81),
@@ -753,12 +753,12 @@ export const TECHNIQUE_CASES: TechniqueCaseBase[] = [
         const r = Math.floor(i / 9);
         const c = i % 9;
         if (r === 0 && c === 0) return 257; // A {1,9}
-        if (r === 0 && c === 1) return 258; // B {2,9}
-        if (r === 4 && c === 1) return 260; // C {3,9}
-        if (r === 4 && c === 0) return 264; // D {4,9}
-        if (r === 0 && c === 8) return 272; // keep A-B weak (row0 not strong)
-        if (r === 4 && c === 8) return 288; // keep C-D weak (row4 not strong)
-        if (r === 1 && c === 2) return 320; // block0 peer of A-B (should be eliminated)
+        if (r === 1 && c === 1) return 258; // B {2,9}
+        if (r === 1 && c === 4) return 260; // C {3,9}
+        if (r === 0 && c === 4) return 264; // D {4,9}
+        if (r === 2 && c === 2) return 272; // F in block0 (A-B weak peer)
+        if (r === 2 && c === 3) return 288; // E in block1 (C-D weak peer)
+        if (r === 8 && c === 4) return 320; // keep col4 weak (not strong)
         return 255; // default no 9
       }),
     },
@@ -768,12 +768,12 @@ export const TECHNIQUE_CASES: TechniqueCaseBase[] = [
         const r = Math.floor(i / 9);
         const c = i % 9;
         if (r === 0 && c === 0) return 257;
-        if (r === 0 && c === 1) return 258;
-        if (r === 4 && c === 1) return 260;
-        if (r === 4 && c === 0) return 264;
-        if (r === 0 && c === 8) return 16; // 9 removed by weak edge A-B in row0
-        if (r === 4 && c === 8) return 32; // 9 removed by weak edge C-D in row4
-        if (r === 1 && c === 2) return 64; // 9 removed by weak edge A-B in block0
+        if (r === 1 && c === 1) return 258;
+        if (r === 1 && c === 4) return 260;
+        if (r === 0 && c === 4) return 264;
+        if (r === 2 && c === 2) return 16; // 9 removed in block0
+        if (r === 2 && c === 3) return 32; // 9 removed in block1
+        if (r === 8 && c === 4) return 64; // 9 removed in col4
         return 255;
       }),
     },

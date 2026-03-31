@@ -63,4 +63,4 @@
 
 - [HoDoKu – Solving Techniques Introduction](http://hodoku.sourceforge.net/en/tech_intro.php)
 - [Sudopedia – Category:Solving Techniques](http://www.sudopedia.org/wiki/Category:Solving_Techniques)
-
+- [ナンプレ技法一覧](https://www20.big.or.jp/~morm-e/puzzle/techniques/number_place/)

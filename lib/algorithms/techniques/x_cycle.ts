@@ -85,6 +85,8 @@ export function tryXCycleStep(grid: SudokuGrid): TechniqueApplyResult | null {
       }
     }
 
+    let discontinuousFallback: TechniqueApplyResult | null = null;
+
     for (const start of candidateCells) {
       for (const firstType of ["strong", "weak"] as const) {
         const pathNodes = [start];
@@ -103,7 +105,7 @@ export function tryXCycleStep(grid: SudokuGrid): TechniqueApplyResult | null {
 
           for (const to of neighbors) {
             if (to === start) {
-              if (edgesUsed + 1 < 5) continue;
+              if (edgesUsed + 1 < 4) continue;
               pathEdges.push(expect);
 
               // cycle nodes order: pathNodes[0..n-1], back to start
@@ -153,7 +155,10 @@ export function tryXCycleStep(grid: SudokuGrid): TechniqueApplyResult | null {
                 elimBitsByCell,
               );
               pathEdges.pop();
-              if (hit) return hit;
+              if (hit) {
+                if (!hasDiscontinuous) return hit;
+                if (!discontinuousFallback) discontinuousFallback = hit;
+              }
               continue;
             }
 
@@ -176,6 +181,7 @@ export function tryXCycleStep(grid: SudokuGrid): TechniqueApplyResult | null {
         if (hit) return hit;
       }
     }
+    if (discontinuousFallback) return discontinuousFallback;
   }
 
   return null;
