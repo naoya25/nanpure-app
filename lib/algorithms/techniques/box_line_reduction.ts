@@ -1,10 +1,10 @@
 import {
   ALL_CANDIDATE_BITS,
+  hasEmptyCellWithoutMemo,
   sudokuBlockCellIndices,
   sudokuColCellIndices,
   sudokuRowCellIndices,
 } from "@/lib/algorithms/techniques/helper";
-import { tryPencilMarkStep } from "@/lib/algorithms/techniques/pencil_mark";
 
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
@@ -29,22 +29,13 @@ function cellBlockIndex(i: number): number {
  * 候補集合は `pointing` と同様（ピアの確定値＋空マスは memoMask があるとき交差）。
  * 適用後は空マスごとに `getMask & ~削除ビット` をメモとする。
  *
- * ペンシルマーク前提のため、内部で `tryPencilMarkStep` を 1 回だけ呼んでから判定を行う。
+ * 空マスでメモ未入力のマスが 1 つでもあれば実行しない（自動ペンシルは行わない）。
  */
 export function tryBoxLineReductionStep(
   grid: SudokuGrid,
 ): TechniqueApplyResult | null {
-  const pencilRes = tryPencilMarkStep(grid);
-  const work = pencilRes?.grid ?? grid;
-  const boxLineRes = tryBoxLineReductionEliminationAfterPencil(work);
-  if (boxLineRes) {
-    const cellIndex =
-      pencilRes && pencilRes.cellIndex.length > 0
-        ? [...new Set([...pencilRes.cellIndex, ...boxLineRes.cellIndex])]
-        : boxLineRes.cellIndex;
-    return { cellIndex, grid: boxLineRes.grid };
-  }
-  return pencilRes ?? null;
+  if (hasEmptyCellWithoutMemo(grid)) return null;
+  return tryBoxLineReductionEliminationAfterPencil(grid);
 }
 
 function tryBoxLineReductionEliminationAfterPencil(

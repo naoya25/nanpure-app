@@ -7,6 +7,11 @@ import {
 
 import { tryFullHouseStep } from "@/lib/algorithms/techniques/full_house";
 import { tryHiddenSingleStep } from "@/lib/algorithms/techniques/hidden_single";
+import {
+  tryHiddenPairStep,
+  tryHiddenQuadStep,
+  tryHiddenTripleStep,
+} from "@/lib/algorithms/techniques/hidden_subset";
 import { tryMemoSingleStep } from "@/lib/algorithms/techniques/memo_single";
 import { tryPencilMarkStep } from "@/lib/algorithms/techniques/pencil_mark";
 import { tryPointingStep } from "@/lib/algorithms/techniques/pointing";
@@ -36,6 +41,9 @@ const TRY_BY_ID: Record<TechniqueId, TryTechnique> = {
   [TechniqueId.PAIR]: (grid) => tryPairStep(grid),
   [TechniqueId.TRIPLE]: (grid) => tryTripleStep(grid),
   [TechniqueId.QUAD]: (grid) => tryQuadStep(grid),
+  [TechniqueId.HIDDEN_PAIR]: (grid) => tryHiddenPairStep(grid),
+  [TechniqueId.HIDDEN_TRIPLE]: (grid) => tryHiddenTripleStep(grid),
+  [TechniqueId.HIDDEN_QUAD]: (grid) => tryHiddenQuadStep(grid),
 };
 
 export function runTechniqueStep(

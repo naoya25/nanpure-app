@@ -1,4 +1,19 @@
+import type { SudokuGrid } from "@/lib/models/sudoku_grid";
+import { SUDOKU_CELLS } from "@/lib/validates/grid";
+
 export const ALL_CANDIDATE_BITS = 0x1ff;
+
+/**
+ * 空マスでメモが未入力（`memoMask === 0`）のセルが 1 つでもある。
+ * ペンシルマークを自動記入せず、候補交差前提のテクニックは実行しない。
+ */
+export function hasEmptyCellWithoutMemo(grid: SudokuGrid): boolean {
+  for (let i = 0; i < SUDOKU_CELLS; i++) {
+    const c = grid.cellAt(i);
+    if (c.value === 0 && (c.memoMask & 0x1ff) === 0) return true;
+  }
+  return false;
+}
 
 /** 9ビット候補マスクの 空マスの数 */
 export function popcount9(mask: number): number {

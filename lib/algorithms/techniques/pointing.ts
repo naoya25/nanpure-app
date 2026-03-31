@@ -1,10 +1,10 @@
 import {
   ALL_CANDIDATE_BITS,
+  hasEmptyCellWithoutMemo,
   sudokuBlockCellIndices,
   sudokuColCellIndices,
   sudokuRowCellIndices,
 } from "@/lib/algorithms/techniques/helper";
-import { tryPencilMarkStep } from "@/lib/algorithms/techniques/pencil_mark";
 
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
@@ -23,22 +23,13 @@ function cellBlockIndex(i: number): number {
  * その行（列）のブロック外から当該数字の候補を消す。
  *
  * 候補集合は `hidden_single` 等と同様（ピアの確定値＋空マスは `memoMask` があるとき交差）。
- * 適用後は空マスごとに `getMask & ~削除ビット` をメモとする（memo 未入力のマスも自動候補に合わせて更新）。
+ * 適用後は空マスごとに `getMask & ~削除ビット` をメモとする。
  *
- * ペンシルマーク前提のため、内部で `tryPencilMarkStep` を 1 回だけ呼んでからポインティング判定を行う。
+ * 空マスでメモ未入力のマスが 1 つでもあれば実行しない（自動ペンシルは行わない）。
  */
 export function tryPointingStep(grid: SudokuGrid): TechniqueApplyResult | null {
-  const pencilRes = tryPencilMarkStep(grid);
-  const work = pencilRes?.grid ?? grid;
-  const pointRes = tryPointingEliminationAfterPencil(work);
-  if (pointRes) {
-    const cellIndex =
-      pencilRes && pencilRes.cellIndex.length > 0
-        ? [...new Set([...pencilRes.cellIndex, ...pointRes.cellIndex])]
-        : pointRes.cellIndex;
-    return { cellIndex, grid: pointRes.grid };
-  }
-  return pencilRes ?? null;
+  if (hasEmptyCellWithoutMemo(grid)) return null;
+  return tryPointingEliminationAfterPencil(grid);
 }
 
 function tryPointingEliminationAfterPencil(

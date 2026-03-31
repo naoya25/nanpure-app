@@ -13,6 +13,9 @@ export enum TechniqueId {
   PAIR = "PAIR",
   TRIPLE = "TRIPLE",
   QUAD = "QUAD",
+  HIDDEN_PAIR = "HIDDEN_PAIR",
+  HIDDEN_TRIPLE = "HIDDEN_TRIPLE",
+  HIDDEN_QUAD = "HIDDEN_QUAD",
 }
 
 export type TechniqueDescriptor = {
@@ -32,6 +35,9 @@ export const TECHNIQUE_LABELS = [
   { id: TechniqueId.PAIR, label: "ペア" },
   { id: TechniqueId.TRIPLE, label: "トリプル" },
   { id: TechniqueId.QUAD, label: "クァッド" },
+  { id: TechniqueId.HIDDEN_PAIR, label: "隠れペア" },
+  { id: TechniqueId.HIDDEN_TRIPLE, label: "隠れトリプル" },
+  { id: TechniqueId.HIDDEN_QUAD, label: "隠れクァッド" },
 ] as const satisfies readonly TechniqueDescriptor[];
 
 export type TechniqueStepResult =

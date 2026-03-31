@@ -1,7 +1,6 @@
 import {
   ALL_CANDIDATE_BITS,
   hasEmptyCellWithoutMemo,
-  popcount9,
   sudokuBlockCellIndices,
   sudokuColCellIndices,
   sudokuRowCellIndices,
@@ -12,10 +11,12 @@ import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
 import { sudokuPeerIndices } from "@/lib/validates/grid";
 
 /**
- * ペア(2) / トリプル(3) / クァッド(4)。ユニット内の n マスで候補の和集合がちょうど n 種類 → 他マスからその n 数字の候補を削除。
+ * 隠れペア(2) / 隠れトリプル(3) / 隠れクァッド(4)。某 n 桁の候補がユニット内のちょうど n マスにだけ現れる → それらのマスから n 桁以外の候補を削除。
  * 空マスでメモ未入力が 1 つでもあれば実行しない。
  */
-type SubsetSize = 2 | 3 | 4;
+type HiddenSubsetSize = 2 | 3 | 4;
+
+const DIGITS_POOL: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
 
 function makeGetMask(values: readonly number[], grid: SudokuGrid) {
   return (cellIndex: number): number => {
@@ -37,11 +38,11 @@ function makeGetMask(values: readonly number[], grid: SudokuGrid) {
 }
 
 function forEachCombination(
-  indices: readonly number[],
+  pool: readonly number[],
   n: number,
   visit: (comb: readonly number[]) => void,
 ): void {
-  const k = indices.length;
+  const k = pool.length;
   if (n > k) return;
   const pick: number[] = [];
   const rec = (start: number, depth: number) => {
@@ -50,7 +51,7 @@ function forEachCombination(
       return;
     }
     for (let i = start; i <= k - (n - depth); i++) {
-      pick.push(indices[i]!);
+      pick.push(pool[i]!);
       rec(i + 1, depth + 1);
       pick.pop();
     }
@@ -58,38 +59,34 @@ function forEachCombination(
   rec(0, 0);
 }
 
-function trySubsetEliminationAfterPencil(
+function tryHiddenSubsetEliminationAfterPencil(
   grid: SudokuGrid,
-  subsetSize: SubsetSize,
+  subsetSize: HiddenSubsetSize,
 ): TechniqueApplyResult | null {
   const values = [...grid.values()];
   const getMask = makeGetMask(values, grid);
   const elimBitsByCell = new Array<number>(81).fill(0);
 
   const scanUnit = (unitIndices: readonly number[]) => {
-    const empties: number[] = [];
-    for (const i of unitIndices) {
-      if (values[i] !== 0) continue;
-      const m = getMask(i);
-      if (m === 0) continue;
-      empties.push(i);
-    }
-    if (empties.length < subsetSize) return;
+    forEachCombination(DIGITS_POOL, subsetSize, (digitComb) => {
+      let maskDigits = 0;
+      for (const d of digitComb) maskDigits |= 1 << (d - 1);
 
-    forEachCombination(empties, subsetSize, (comb) => {
-      let union = 0;
-      for (const i of comb) union |= getMask(i);
-      if (popcount9(union) !== subsetSize) return;
-      for (const i of comb) {
-        if ((getMask(i) & ~union) !== 0) return;
-      }
-      const combSet = new Set(comb);
+      const cellsWithAny: number[] = [];
       for (const i of unitIndices) {
         if (values[i] !== 0) continue;
-        if (combSet.has(i)) continue;
         const m = getMask(i);
-        const overlap = m & union;
-        if (overlap !== 0) elimBitsByCell[i] |= overlap;
+        if (m === 0) continue;
+        if ((m & maskDigits) !== 0) cellsWithAny.push(i);
+      }
+      if (cellsWithAny.length !== subsetSize) return;
+
+      let cover = 0;
+      for (const i of cellsWithAny) cover |= getMask(i);
+      if ((cover & maskDigits) !== maskDigits) return;
+
+      for (const i of cellsWithAny) {
+        elimBitsByCell[i] |= getMask(i) & ~maskDigits;
       }
     });
   };
@@ -118,25 +115,31 @@ function trySubsetEliminationAfterPencil(
   };
 }
 
-function trySubsetStep(
+function tryHiddenSubsetStep(
   grid: SudokuGrid,
-  subsetSize: SubsetSize,
+  subsetSize: HiddenSubsetSize,
 ): TechniqueApplyResult | null {
   if (hasEmptyCellWithoutMemo(grid)) return null;
-  return trySubsetEliminationAfterPencil(grid, subsetSize);
+  return tryHiddenSubsetEliminationAfterPencil(grid, subsetSize);
 }
 
-/** ペア（ユニット内 2 マス・2 種類の候補にロック → 他マスからその 2 数字を削除）。 */
-export function tryPairStep(grid: SudokuGrid): TechniqueApplyResult | null {
-  return trySubsetStep(grid, 2);
+/** 隠れペア。 */
+export function tryHiddenPairStep(
+  grid: SudokuGrid,
+): TechniqueApplyResult | null {
+  return tryHiddenSubsetStep(grid, 2);
 }
 
-/** トリプル（3 マス・3 種類）。 */
-export function tryTripleStep(grid: SudokuGrid): TechniqueApplyResult | null {
-  return trySubsetStep(grid, 3);
+/** 隠れトリプル。 */
+export function tryHiddenTripleStep(
+  grid: SudokuGrid,
+): TechniqueApplyResult | null {
+  return tryHiddenSubsetStep(grid, 3);
 }
 
-/** クァッド（4 マス・4 種類）。 */
-export function tryQuadStep(grid: SudokuGrid): TechniqueApplyResult | null {
-  return trySubsetStep(grid, 4);
+/** 隠れクァッド。 */
+export function tryHiddenQuadStep(
+  grid: SudokuGrid,
+): TechniqueApplyResult | null {
+  return tryHiddenSubsetStep(grid, 4);
 }
