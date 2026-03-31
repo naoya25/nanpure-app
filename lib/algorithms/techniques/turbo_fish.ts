@@ -1,6 +1,5 @@
 import {
   applyEliminationSeeingBothEnds,
-  buildTechniqueResultFromElimBits,
   hasEmptyCellWithoutMemo,
   makeGetMask,
   sudokuBlockCellIndices,
