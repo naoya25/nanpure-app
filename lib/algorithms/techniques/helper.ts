@@ -1,5 +1,5 @@
 import type { SudokuGrid } from "@/lib/models/sudoku_grid";
-import { SUDOKU_CELLS } from "@/lib/validates/grid";
+import { SUDOKU_CELLS, sudokuPeerIndices } from "@/lib/validates/grid";
 
 export const ALL_CANDIDATE_BITS = 0x1ff;
 
@@ -52,4 +52,28 @@ export function sudokuBlockCellIndices(block: number): readonly number[] {
     }
   }
   return out;
+}
+
+/**
+ * 空マスの有効候補を返す getter を作る。
+ * - ピア確定値で除外
+ * - メモがある場合はメモと交差
+ */
+export function makeGetMask(values: readonly number[], grid: SudokuGrid) {
+  return (cellIndex: number): number => {
+    if (values[cellIndex] !== 0) return 0;
+
+    let usedMask = 0;
+    for (const j of sudokuPeerIndices(cellIndex)) {
+      if (j === cellIndex) continue;
+      const v = values[j] ?? 0;
+      if (v === 0) continue;
+      usedMask |= 1 << (v - 1);
+    }
+
+    let candidateMask = ALL_CANDIDATE_BITS & ~usedMask;
+    const memoMask = grid.cellAt(cellIndex).memoMask;
+    if (memoMask !== 0) candidateMask &= memoMask;
+    return candidateMask;
+  };
 }

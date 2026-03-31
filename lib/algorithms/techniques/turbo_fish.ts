@@ -1,6 +1,6 @@
 import {
-  ALL_CANDIDATE_BITS,
   hasEmptyCellWithoutMemo,
+  makeGetMask,
   sudokuBlockCellIndices,
   sudokuColCellIndices,
   sudokuRowCellIndices,
@@ -16,25 +16,6 @@ type StrongLink = {
   a: number;
   b: number;
 };
-
-function makeGetMask(values: readonly number[], grid: SudokuGrid) {
-  return (cellIndex: number): number => {
-    if (values[cellIndex] !== 0) return 0;
-
-    let usedMask = 0;
-    for (const j of sudokuPeerIndices(cellIndex)) {
-      if (j === cellIndex) continue;
-      const v = values[j] ?? 0;
-      if (v === 0) continue;
-      usedMask |= 1 << (v - 1);
-    }
-
-    let candidateMask = ALL_CANDIDATE_BITS & ~usedMask;
-    const memoMask = grid.cellAt(cellIndex).memoMask;
-    if (memoMask !== 0) candidateMask &= memoMask;
-    return candidateMask;
-  };
-}
 
 function sharesAnyHouse(i: number, j: number): boolean {
   const r1 = Math.floor(i / 9);

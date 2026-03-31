@@ -1,6 +1,6 @@
 import {
-  ALL_CANDIDATE_BITS,
   hasEmptyCellWithoutMemo,
+  makeGetMask,
   popcount9,
   sudokuBlockCellIndices,
   sudokuColCellIndices,
@@ -9,7 +9,6 @@ import {
 
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
-import { sudokuPeerIndices } from "@/lib/validates/grid";
 
 /**
  * ペア(2) / トリプル(3) / クァッド(4)。ユニット内の n マスで候補の和集合がちょうど n 種類 → 他マスからその n 数字の候補を削除。
@@ -18,25 +17,6 @@ import { sudokuPeerIndices } from "@/lib/validates/grid";
  * 1 回の適用では行→列→ブロックの順で、最初に候補削除が起きるサブセット 1 件だけを行う。
  */
 type SubsetSize = 2 | 3 | 4;
-
-function makeGetMask(values: readonly number[], grid: SudokuGrid) {
-  return (cellIndex: number): number => {
-    if (values[cellIndex] !== 0) return 0;
-
-    let usedMask = 0;
-    for (const j of sudokuPeerIndices(cellIndex)) {
-      if (j === cellIndex) continue;
-      const v = values[j] ?? 0;
-      if (v === 0) continue;
-      usedMask |= 1 << (v - 1);
-    }
-
-    let candidateMask = ALL_CANDIDATE_BITS & ~usedMask;
-    const memoMask = grid.cellAt(cellIndex).memoMask;
-    if (memoMask !== 0) candidateMask &= memoMask;
-    return candidateMask;
-  };
-}
 
 function forEachCombination(
   indices: readonly number[],

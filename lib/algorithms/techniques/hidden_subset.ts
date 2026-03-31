@@ -1,6 +1,6 @@
 import {
-  ALL_CANDIDATE_BITS,
   hasEmptyCellWithoutMemo,
+  makeGetMask,
   sudokuBlockCellIndices,
   sudokuColCellIndices,
   sudokuRowCellIndices,
@@ -8,7 +8,6 @@ import {
 
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
-import { sudokuPeerIndices } from "@/lib/validates/grid";
 
 /**
  * 隠れペア(2) / 隠れトリプル(3) / 隠れクァッド(4)。某 n 桁の候補がユニット内のちょうど n マスにだけ現れる → それらのマスから n 桁以外の候補を削除。
@@ -19,25 +18,6 @@ import { sudokuPeerIndices } from "@/lib/validates/grid";
 type HiddenSubsetSize = 2 | 3 | 4;
 
 const DIGITS_POOL: readonly number[] = [1, 2, 3, 4, 5, 6, 7, 8, 9];
-
-function makeGetMask(values: readonly number[], grid: SudokuGrid) {
-  return (cellIndex: number): number => {
-    if (values[cellIndex] !== 0) return 0;
-
-    let usedMask = 0;
-    for (const j of sudokuPeerIndices(cellIndex)) {
-      if (j === cellIndex) continue;
-      const v = values[j] ?? 0;
-      if (v === 0) continue;
-      usedMask |= 1 << (v - 1);
-    }
-
-    let candidateMask = ALL_CANDIDATE_BITS & ~usedMask;
-    const memoMask = grid.cellAt(cellIndex).memoMask;
-    if (memoMask !== 0) candidateMask &= memoMask;
-    return candidateMask;
-  };
-}
 
 function forEachCombination(
   pool: readonly number[],
