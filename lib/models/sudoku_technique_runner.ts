@@ -41,6 +41,7 @@ import {
   tryXYWingStep,
   tryXYZWingStep,
 } from "@/lib/algorithms/techniques/wing";
+import { tryUniqueRectangleStep } from "@/lib/algorithms/techniques/unique_rectangle";
 
 type TryTechnique = (
   grid: SudokuGrid,
@@ -71,6 +72,7 @@ const TRY_BY_ID: Record<TechniqueId, TryTechnique> = {
   [TechniqueId.XYZ_WING]: (grid) => tryXYZWingStep(grid),
   [TechniqueId.WXYZ_WING]: (grid) => tryWXYZWingStep(grid),
   [TechniqueId.W_WING]: (grid) => tryWWingStep(grid),
+  [TechniqueId.UNIQUE_RECTANGLE]: (grid) => tryUniqueRectangleStep(grid),
   [TechniqueId.FISH_44]: (grid) => tryFish44Step(grid),
   [TechniqueId.FISH_55]: (grid) => tryFish55Step(grid),
   [TechniqueId.FISH_66]: (grid) => tryFish66Step(grid),
