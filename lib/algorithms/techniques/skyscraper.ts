@@ -1,4 +1,5 @@
 import {
+  applyEliminationSeeingBothEnds,
   hasEmptyCellWithoutMemo,
   makeGetMask,
   popcount9,
@@ -6,7 +7,6 @@ import {
 
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
-import { sudokuPeerIndices } from "@/lib/validates/grid";
 
 /** 9 ビットのマスクでちょうど 1 ビットが立っているとき、そのインデックス 0..8 */
 function soleBitIndex(mask: number): number {
@@ -16,48 +16,6 @@ function soleBitIndex(mask: number): number {
     if (m & (1 << i)) return i;
   }
   return -1;
-}
-
-function applyEliminationSeeingBothRoofs(
-  grid: SudokuGrid,
-  values: readonly number[],
-  getMask: (i: number) => number,
-  roof1: number,
-  roof2: number,
-  bit: number,
-  /** パターン上のフロア（共有列／共有行の共役側）。両屋根を見るが削除してはいけないマス */
-  floorCells: readonly [number, number],
-): TechniqueApplyResult | null {
-  const peers1 = new Set(sudokuPeerIndices(roof1));
-  const peers2 = new Set(sudokuPeerIndices(roof2));
-  const skip = new Set<number>([roof1, roof2, floorCells[0], floorCells[1]]);
-
-  const elimBitsByCell = new Array<number>(81).fill(0);
-  for (let i = 0; i < 81; i++) {
-    if (values[i] !== 0) continue;
-    if (skip.has(i)) continue;
-    if (!peers1.has(i) || !peers2.has(i)) continue;
-    if (getMask(i) & bit) elimBitsByCell[i] |= bit;
-  }
-
-  const nextMasks = Array.from({ length: 81 }, (_, i) => {
-    if (values[i] !== 0) return 0;
-    return getMask(i) & ~elimBitsByCell[i]!;
-  });
-
-  const changedCells: number[] = [];
-  for (let i = 0; i < 81; i++) {
-    if (values[i] !== 0) continue;
-    const prev = grid.cellAt(i).memoMask & 0x1ff;
-    if (nextMasks[i]! !== prev) changedCells.push(i);
-  }
-
-  if (changedCells.length === 0) return null;
-
-  return {
-    cellIndex: changedCells,
-    grid: SudokuGrid.fromValuesAndCandidateMasks(values, nextMasks),
-  };
 }
 
 /**
@@ -119,14 +77,14 @@ export function trySkyscraperStep(
           r1 * 9 + sharedCol,
           r2 * 9 + sharedCol,
         ];
-        const hit = applyEliminationSeeingBothRoofs(
+        const hit = applyEliminationSeeingBothEnds(
           grid,
           values,
           getMask,
           roof1,
           roof2,
           bit,
-          floorCells,
+          [roof1, roof2, floorCells[0], floorCells[1]],
         );
         if (hit) return hit;
       }
@@ -156,14 +114,14 @@ export function trySkyscraperStep(
           sharedRow * 9 + col1,
           sharedRow * 9 + col2,
         ];
-        const hit = applyEliminationSeeingBothRoofs(
+        const hit = applyEliminationSeeingBothEnds(
           grid,
           values,
           getMask,
           roof1,
           roof2,
           bit,
-          floorCells,
+          [roof1, roof2, floorCells[0], floorCells[1]],
         );
         if (hit) return hit;
       }

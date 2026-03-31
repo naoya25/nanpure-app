@@ -1,4 +1,6 @@
 import {
+  applyEliminationSeeingBothEnds,
+  buildTechniqueResultFromElimBits,
   hasEmptyCellWithoutMemo,
   makeGetMask,
   sudokuBlockCellIndices,
@@ -7,7 +9,6 @@ import {
 } from "@/lib/algorithms/techniques/helper";
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
-import { sudokuPeerIndices } from "@/lib/validates/grid";
 
 type HouseKind = "row" | "col" | "block";
 type StrongLink = {
@@ -46,46 +47,6 @@ function buildStrongLinksForDigit(
   }
 
   return out;
-}
-
-function applyEliminationSeeingBothEnds(
-  grid: SudokuGrid,
-  values: readonly number[],
-  getMask: (i: number) => number,
-  end1: number,
-  end2: number,
-  bit: number,
-  chainCells: readonly number[],
-): TechniqueApplyResult | null {
-  const peers1 = new Set(sudokuPeerIndices(end1));
-  const peers2 = new Set(sudokuPeerIndices(end2));
-  const skip = new Set<number>(chainCells);
-
-  const elimBitsByCell = new Array<number>(81).fill(0);
-  for (let i = 0; i < 81; i++) {
-    if (values[i] !== 0) continue;
-    if (skip.has(i)) continue;
-    if (!peers1.has(i) || !peers2.has(i)) continue;
-    if (getMask(i) & bit) elimBitsByCell[i] |= bit;
-  }
-
-  const nextMasks = Array.from({ length: 81 }, (_, i) => {
-    if (values[i] !== 0) return 0;
-    return getMask(i) & ~elimBitsByCell[i]!;
-  });
-
-  const changedCells: number[] = [];
-  for (let i = 0; i < 81; i++) {
-    if (values[i] !== 0) continue;
-    const prev = grid.cellAt(i).memoMask & 0x1ff;
-    if (nextMasks[i]! !== prev) changedCells.push(i);
-  }
-
-  if (changedCells.length === 0) return null;
-  return {
-    cellIndex: changedCells,
-    grid: SudokuGrid.fromValuesAndCandidateMasks(values, nextMasks),
-  };
 }
 
 /**

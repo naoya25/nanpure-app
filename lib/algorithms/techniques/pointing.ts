@@ -1,6 +1,7 @@
 import {
-  ALL_CANDIDATE_BITS,
+  buildTechniqueResultFromElimBits,
   hasEmptyCellWithoutMemo,
+  makeGetMask,
   sudokuBlockCellIndices,
   sudokuColCellIndices,
   sudokuRowCellIndices,
@@ -8,7 +9,6 @@ import {
 
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
-import { sudokuPeerIndices } from "@/lib/validates/grid";
 
 /** セルインデックス `0..80` の属するブロック番号 `0..8`（左→右・上→下） */
 function cellBlockIndex(i: number): number {
@@ -38,22 +38,7 @@ function tryPointingEliminationAfterPencil(
   grid: SudokuGrid,
 ): TechniqueApplyResult | null {
   const values = [...grid.values()];
-  const getMask = (cellIndex: number) => {
-    if (values[cellIndex] !== 0) return 0;
-
-    let usedMask = 0;
-    for (const j of sudokuPeerIndices(cellIndex)) {
-      if (j === cellIndex) continue;
-      const v = values[j] ?? 0;
-      if (v === 0) continue;
-      usedMask |= 1 << (v - 1);
-    }
-
-    let candidateMask = ALL_CANDIDATE_BITS & ~usedMask;
-    const memoMask = grid.cellAt(cellIndex).memoMask;
-    if (memoMask !== 0) candidateMask &= memoMask;
-    return candidateMask;
-  };
+  const getMask = makeGetMask(values, grid);
 
   for (let b = 0; b < 9; b++) {
     const blockCells = sudokuBlockCellIndices(b);
@@ -87,26 +72,13 @@ function tryPointingEliminationAfterPencil(
         }
       }
 
-      const nextMasks = Array.from({ length: 81 }, (__, i) => {
-        if (values[i] !== 0) return 0;
-        return getMask(i) & ~elimBitsByCell[i]!;
-      });
-
-      const changedCells: number[] = [];
-      for (let i = 0; i < 81; i++) {
-        if (values[i] !== 0) continue;
-        const prev = grid.cellAt(i).memoMask & 0x1ff;
-        if (nextMasks[i]! !== prev) {
-          changedCells.push(i);
-        }
-      }
-
-      if (changedCells.length > 0) {
-        return {
-          cellIndex: changedCells,
-          grid: SudokuGrid.fromValuesAndCandidateMasks(values, nextMasks),
-        };
-      }
+      const hit = buildTechniqueResultFromElimBits(
+        grid,
+        values,
+        getMask,
+        elimBitsByCell,
+      );
+      if (hit) return hit;
     }
   }
 

@@ -1,4 +1,5 @@
-import type { SudokuGrid } from "@/lib/models/sudoku_grid";
+import { SudokuGrid } from "@/lib/models/sudoku_grid";
+import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
 import { SUDOKU_CELLS, sudokuPeerIndices } from "@/lib/validates/grid";
 
 export const ALL_CANDIDATE_BITS = 0x1ff;
@@ -76,4 +77,62 @@ export function makeGetMask(values: readonly number[], grid: SudokuGrid) {
     if (memoMask !== 0) candidateMask &= memoMask;
     return candidateMask;
   };
+}
+
+export type GetMask = (cellIndex: number) => number;
+
+/**
+ * 削除ビット配列を現在候補へ適用し、差分がある場合だけ TechniqueApplyResult を返す。
+ */
+export function buildTechniqueResultFromElimBits(
+  grid: SudokuGrid,
+  values: readonly number[],
+  getMask: GetMask,
+  elimBitsByCell: readonly number[],
+): TechniqueApplyResult | null {
+  const nextMasks = Array.from({ length: 81 }, (_, i) => {
+    if (values[i] !== 0) return 0;
+    return getMask(i) & ~elimBitsByCell[i]!;
+  });
+
+  const changedCells: number[] = [];
+  for (let i = 0; i < 81; i++) {
+    if (values[i] !== 0) continue;
+    const prev = grid.cellAt(i).memoMask & 0x1ff;
+    if (nextMasks[i]! !== prev) changedCells.push(i);
+  }
+
+  if (changedCells.length === 0) return null;
+  return {
+    cellIndex: changedCells,
+    grid: SudokuGrid.fromValuesAndCandidateMasks(values, nextMasks),
+  };
+}
+
+/**
+ * 2 端点を同時に見るマスから bit を削除する共通処理。
+ * `skipCells` はパターン構成セル（削除対象外）を渡す。
+ */
+export function applyEliminationSeeingBothEnds(
+  grid: SudokuGrid,
+  values: readonly number[],
+  getMask: GetMask,
+  end1: number,
+  end2: number,
+  bit: number,
+  skipCells: readonly number[],
+): TechniqueApplyResult | null {
+  const peers1 = new Set(sudokuPeerIndices(end1));
+  const peers2 = new Set(sudokuPeerIndices(end2));
+  const skip = new Set<number>(skipCells);
+
+  const elimBitsByCell = new Array<number>(81).fill(0);
+  for (let i = 0; i < 81; i++) {
+    if (values[i] !== 0) continue;
+    if (skip.has(i)) continue;
+    if (!peers1.has(i) || !peers2.has(i)) continue;
+    if (getMask(i) & bit) elimBitsByCell[i] |= bit;
+  }
+
+  return buildTechniqueResultFromElimBits(grid, values, getMask, elimBitsByCell);
 }
