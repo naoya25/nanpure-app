@@ -368,7 +368,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
         <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
           <p className="font-medium">振り返り</p>
           <p className="mt-1 text-amber-900/90">
-            初期盤面から「一手進める」で操作を順に再表示できます。「一手戻る」で戻せます。盤と数字入力は使えません。
+            初期盤面から「一手進める」で操作を順に再表示できます。「一手戻る」で戻せます。数字入力は使えませんが、盤面のマス選択ハイライトは確認できます。
           </p>
         </div>
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
@@ -404,7 +404,6 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
             memoHighlightDigit={memoHighlightDigit}
             solution81={puzzle.solution_81}
             techniqueHighlightedCells={techniqueHighlightedCells}
-            interactionDisabled
           />
           {history.presentTechniqueId ? (
             <p className="mt-2 text-center text-xs text-zinc-500">
