@@ -44,7 +44,8 @@
 | 上級    | `AIC`                                           | 候補ノード（cell,digit）で strong/weak を交互連鎖する一般形。現実装は同一 digit 端点の共通ピア削除（X-Chain 包含）まで対応。                   | [検索](https://www.google.com/search?q=ナンプレ+AIC)                           | done |
 | 上級    | （ID未定）フィン付き・殺進魚・変形魚など                           | 基本魚に例外マスやボックス拘束を加えた拡張。文献・実装で名称が細分化される。                                                              | [検索](https://www.google.com/search?q=ナンプレ+フィン付き+殺進魚+変形魚)                 | yet  |
 | 上級    | （ID未定）シングル・カラー／マルチカラー／3D Medusa など              | 強いリンクを色分けし、同色同士の矛盾や「どちらかの色が真」から削除。                                                                  | [検索](https://www.google.com/search?q=ナンプレ+シングルカラー+マルチカラー+3D+Medusa)      | yet  |
-| 上級    | （ID未定）ALS-XZ / ALS-XY-Wing / Sue de Coq など      | ほぼロック集合の共通候補からの削除。                                                                                  | [検索](https://www.google.com/search?q=ナンプレ+ALS-XZ+ALS-XY-Wing+Sue+de+Coq) | yet  |
+| 上級    | `ALS_XZ`                                      | 2つの ALS の共通候補で restricted candidate（X）を使い、もう一方の共通候補（Z）を両 ALS の Z 候補を同時に見るマスから削除。 | [検索](https://www.google.com/search?q=ナンプレ+ALS-XZ)                         | done |
+| 上級    | （ID未定）ALS-XY-Wing / Sue de Coq など             | ほぼロック集合の共通候補からの削除。                                                                                  | [検索](https://www.google.com/search?q=ナンプレ+ALS-XY-Wing+Sue+de+Coq)         | yet  |
 | 探索    | （ID未定）仮置き・矛盾（試し打ち）                              | 候補を仮に真とし伝播、矛盾なら反対が真。**探索**に近く強力。                                                                    | [検索](https://www.google.com/search?q=ナンプレ+仮置き+矛盾)                        | yet  |
 
 

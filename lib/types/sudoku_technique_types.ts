@@ -30,6 +30,7 @@ export enum TechniqueId {
   BUG_PLUS_1 = "BUG_PLUS_1",
   XY_CHAIN = "XY_CHAIN",
   X_CYCLE = "X_CYCLE",
+  ALS_XZ = "ALS_XZ",
   AIC = "AIC",
   FISH_44 = "FISH_44",
   FISH_55 = "FISH_55",
@@ -77,6 +78,7 @@ export const TECHNIQUE_LABELS = [
   { id: TechniqueId.XY_CHAIN, label: "XY-Chain" },
   { id: TechniqueId.X_CHAIN, label: "X-Chain" },
   { id: TechniqueId.X_CYCLE, label: "X-Cycle" },
+  { id: TechniqueId.ALS_XZ, label: "ALS-XZ" },
   { id: TechniqueId.AIC, label: "AIC" },
 ] as const satisfies readonly TechniqueDescriptor[];
 
