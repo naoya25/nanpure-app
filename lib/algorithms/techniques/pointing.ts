@@ -26,6 +26,8 @@ function cellBlockIndex(i: number): number {
  * 適用後は空マスごとに `getMask & ~削除ビット` をメモとする。
  *
  * 空マスでメモ未入力のマスが 1 つでもあれば実行しない（自動ペンシルは行わない）。
+ *
+ * 1 回の適用ではブロック×数字の走査順で最初に候補削除が起きるパターンだけを行う（複数パターンをまとめない）。
  */
 export function tryPointingStep(grid: SudokuGrid): TechniqueApplyResult | null {
   if (hasEmptyCellWithoutMemo(grid)) return null;
@@ -53,12 +55,11 @@ function tryPointingEliminationAfterPencil(
     return candidateMask;
   };
 
-  const elimBitsByCell = new Array<number>(81).fill(0);
-
   for (let b = 0; b < 9; b++) {
     const blockCells = sudokuBlockCellIndices(b);
     for (let digit = 1; digit <= 9; digit++) {
       const bit = 1 << (digit - 1);
+      const elimBitsByCell = new Array<number>(81).fill(0);
       const inBlock: number[] = [];
       for (const i of blockCells) {
         if (values[i] !== 0) continue;
@@ -85,28 +86,30 @@ function tryPointingEliminationAfterPencil(
           if (getMask(i) & bit) elimBitsByCell[i] |= bit;
         }
       }
+
+      const nextMasks = Array.from({ length: 81 }, (__, i) => {
+        if (values[i] !== 0) return 0;
+        return getMask(i) & ~elimBitsByCell[i]!;
+      });
+
+      const changedCells: number[] = [];
+      for (let i = 0; i < 81; i++) {
+        if (values[i] !== 0) continue;
+        const prev = grid.cellAt(i).memoMask & 0x1ff;
+        if (nextMasks[i]! !== prev) {
+          changedCells.push(i);
+        }
+      }
+
+      if (changedCells.length > 0) {
+        return {
+          cellIndex: changedCells,
+          grid: SudokuGrid.fromValuesAndCandidateMasks(values, nextMasks),
+        };
+      }
     }
   }
 
-  const nextMasks = Array.from({ length: 81 }, (__, i) => {
-    if (values[i] !== 0) return 0;
-    return getMask(i) & ~elimBitsByCell[i]!;
-  });
-
-  const changedCells: number[] = [];
-  for (let i = 0; i < 81; i++) {
-    if (values[i] !== 0) continue;
-    const prev = grid.cellAt(i).memoMask & 0x1ff;
-    if (nextMasks[i]! !== prev) {
-      changedCells.push(i);
-    }
-  }
-
-  if (changedCells.length === 0) return null;
-
-  return {
-    cellIndex: changedCells,
-    grid: SudokuGrid.fromValuesAndCandidateMasks(values, nextMasks),
-  };
+  return null;
 }
 

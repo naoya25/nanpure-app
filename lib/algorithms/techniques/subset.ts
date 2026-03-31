@@ -14,6 +14,8 @@ import { sudokuPeerIndices } from "@/lib/validates/grid";
 /**
  * ペア(2) / トリプル(3) / クァッド(4)。ユニット内の n マスで候補の和集合がちょうど n 種類 → 他マスからその n 数字の候補を削除。
  * 空マスでメモ未入力が 1 つでもあれば実行しない。
+ *
+ * 1 回の適用では行→列→ブロックの順で、最初に候補削除が起きるサブセット 1 件だけを行う。
  */
 type SubsetSize = 2 | 3 | 4;
 
@@ -64,9 +66,10 @@ function trySubsetEliminationAfterPencil(
 ): TechniqueApplyResult | null {
   const values = [...grid.values()];
   const getMask = makeGetMask(values, grid);
-  const elimBitsByCell = new Array<number>(81).fill(0);
 
-  const scanUnit = (unitIndices: readonly number[]) => {
+  const scanUnit = (
+    unitIndices: readonly number[],
+  ): TechniqueApplyResult | null => {
     const empties: number[] = [];
     for (const i of unitIndices) {
       if (values[i] !== 0) continue;
@@ -74,9 +77,12 @@ function trySubsetEliminationAfterPencil(
       if (m === 0) continue;
       empties.push(i);
     }
-    if (empties.length < subsetSize) return;
+    if (empties.length < subsetSize) return null;
 
+    let found: TechniqueApplyResult | null = null;
     forEachCombination(empties, subsetSize, (comb) => {
+      if (found !== null) return;
+
       let union = 0;
       for (const i of comb) union |= getMask(i);
       if (popcount9(union) !== subsetSize) return;
@@ -84,6 +90,7 @@ function trySubsetEliminationAfterPencil(
         if ((getMask(i) & ~union) !== 0) return;
       }
       const combSet = new Set(comb);
+      const elimBitsByCell = new Array<number>(81).fill(0);
       for (const i of unitIndices) {
         if (values[i] !== 0) continue;
         if (combSet.has(i)) continue;
@@ -91,31 +98,43 @@ function trySubsetEliminationAfterPencil(
         const overlap = m & union;
         if (overlap !== 0) elimBitsByCell[i] |= overlap;
       }
+
+      const nextMasks = Array.from({ length: 81 }, (_, i) => {
+        if (values[i] !== 0) return 0;
+        return getMask(i) & ~elimBitsByCell[i]!;
+      });
+
+      const changedCells: number[] = [];
+      for (let i = 0; i < 81; i++) {
+        if (values[i] !== 0) continue;
+        const prev = grid.cellAt(i).memoMask & 0x1ff;
+        if (nextMasks[i]! !== prev) changedCells.push(i);
+      }
+
+      if (changedCells.length > 0) {
+        found = {
+          cellIndex: changedCells,
+          grid: SudokuGrid.fromValuesAndCandidateMasks(values, nextMasks),
+        };
+      }
     });
+    return found;
   };
 
-  for (let r = 0; r < 9; r++) scanUnit(sudokuRowCellIndices(r));
-  for (let c = 0; c < 9; c++) scanUnit(sudokuColCellIndices(c));
-  for (let b = 0; b < 9; b++) scanUnit(sudokuBlockCellIndices(b));
-
-  const nextMasks = Array.from({ length: 81 }, (_, i) => {
-    if (values[i] !== 0) return 0;
-    return getMask(i) & ~elimBitsByCell[i]!;
-  });
-
-  const changedCells: number[] = [];
-  for (let i = 0; i < 81; i++) {
-    if (values[i] !== 0) continue;
-    const prev = grid.cellAt(i).memoMask & 0x1ff;
-    if (nextMasks[i]! !== prev) changedCells.push(i);
+  for (let r = 0; r < 9; r++) {
+    const hit = scanUnit(sudokuRowCellIndices(r));
+    if (hit) return hit;
+  }
+  for (let c = 0; c < 9; c++) {
+    const hit = scanUnit(sudokuColCellIndices(c));
+    if (hit) return hit;
+  }
+  for (let b = 0; b < 9; b++) {
+    const hit = scanUnit(sudokuBlockCellIndices(b));
+    if (hit) return hit;
   }
 
-  if (changedCells.length === 0) return null;
-
-  return {
-    cellIndex: changedCells,
-    grid: SudokuGrid.fromValuesAndCandidateMasks(values, nextMasks),
-  };
+  return null;
 }
 
 function trySubsetStep(

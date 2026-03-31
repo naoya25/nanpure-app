@@ -13,6 +13,8 @@ import { sudokuPeerIndices } from "@/lib/validates/grid";
 /**
  * 隠れペア(2) / 隠れトリプル(3) / 隠れクァッド(4)。某 n 桁の候補がユニット内のちょうど n マスにだけ現れる → それらのマスから n 桁以外の候補を削除。
  * 空マスでメモ未入力が 1 つでもあれば実行しない。
+ *
+ * 1 回の適用では行→列→ブロックの順で、最初に候補削除が起きるパターンだけを行う。
  */
 type HiddenSubsetSize = 2 | 3 | 4;
 
@@ -65,10 +67,14 @@ function tryHiddenSubsetEliminationAfterPencil(
 ): TechniqueApplyResult | null {
   const values = [...grid.values()];
   const getMask = makeGetMask(values, grid);
-  const elimBitsByCell = new Array<number>(81).fill(0);
 
-  const scanUnit = (unitIndices: readonly number[]) => {
+  const scanUnit = (
+    unitIndices: readonly number[],
+  ): TechniqueApplyResult | null => {
+    let found: TechniqueApplyResult | null = null;
     forEachCombination(DIGITS_POOL, subsetSize, (digitComb) => {
+      if (found !== null) return;
+
       let maskDigits = 0;
       for (const d of digitComb) maskDigits |= 1 << (d - 1);
 
@@ -85,34 +91,47 @@ function tryHiddenSubsetEliminationAfterPencil(
       for (const i of cellsWithAny) cover |= getMask(i);
       if ((cover & maskDigits) !== maskDigits) return;
 
+      const elimBitsByCell = new Array<number>(81).fill(0);
       for (const i of cellsWithAny) {
         elimBitsByCell[i] |= getMask(i) & ~maskDigits;
       }
+
+      const nextMasks = Array.from({ length: 81 }, (_, i) => {
+        if (values[i] !== 0) return 0;
+        return getMask(i) & ~elimBitsByCell[i]!;
+      });
+
+      const changedCells: number[] = [];
+      for (let i = 0; i < 81; i++) {
+        if (values[i] !== 0) continue;
+        const prev = grid.cellAt(i).memoMask & 0x1ff;
+        if (nextMasks[i]! !== prev) changedCells.push(i);
+      }
+
+      if (changedCells.length > 0) {
+        found = {
+          cellIndex: changedCells,
+          grid: SudokuGrid.fromValuesAndCandidateMasks(values, nextMasks),
+        };
+      }
     });
+    return found;
   };
 
-  for (let r = 0; r < 9; r++) scanUnit(sudokuRowCellIndices(r));
-  for (let c = 0; c < 9; c++) scanUnit(sudokuColCellIndices(c));
-  for (let b = 0; b < 9; b++) scanUnit(sudokuBlockCellIndices(b));
-
-  const nextMasks = Array.from({ length: 81 }, (_, i) => {
-    if (values[i] !== 0) return 0;
-    return getMask(i) & ~elimBitsByCell[i]!;
-  });
-
-  const changedCells: number[] = [];
-  for (let i = 0; i < 81; i++) {
-    if (values[i] !== 0) continue;
-    const prev = grid.cellAt(i).memoMask & 0x1ff;
-    if (nextMasks[i]! !== prev) changedCells.push(i);
+  for (let r = 0; r < 9; r++) {
+    const hit = scanUnit(sudokuRowCellIndices(r));
+    if (hit) return hit;
+  }
+  for (let c = 0; c < 9; c++) {
+    const hit = scanUnit(sudokuColCellIndices(c));
+    if (hit) return hit;
+  }
+  for (let b = 0; b < 9; b++) {
+    const hit = scanUnit(sudokuBlockCellIndices(b));
+    if (hit) return hit;
   }
 
-  if (changedCells.length === 0) return null;
-
-  return {
-    cellIndex: changedCells,
-    grid: SudokuGrid.fromValuesAndCandidateMasks(values, nextMasks),
-  };
+  return null;
 }
 
 function tryHiddenSubsetStep(

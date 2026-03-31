@@ -30,6 +30,8 @@ function cellBlockIndex(i: number): number {
  * 適用後は空マスごとに `getMask & ~削除ビット` をメモとする。
  *
  * 空マスでメモ未入力のマスが 1 つでもあれば実行しない（自動ペンシルは行わない）。
+ *
+ * 1 回の適用では行×数字→列×数字の走査順で、最初に候補削除が起きるパターンだけを行う。
  */
 export function tryBoxLineReductionStep(
   grid: SudokuGrid,
@@ -60,14 +62,38 @@ function tryBoxLineReductionEliminationAfterPencil(
     return candidateMask;
   };
 
-  const elimBitsByCell = new Array<number>(81).fill(0);
+  const buildResultFromElim = (
+    elimBitsByCell: readonly number[],
+  ): TechniqueApplyResult | null => {
+    const nextMasks = Array.from({ length: 81 }, (__, i) => {
+      if (values[i] !== 0) return 0;
+      return getMask(i) & ~elimBitsByCell[i]!;
+    });
 
-  // 行ベース（行→ブロック）
+    const changedCells: number[] = [];
+    for (let i = 0; i < 81; i++) {
+      if (values[i] !== 0) continue;
+      const prev = grid.cellAt(i).memoMask & 0x1ff;
+      if (nextMasks[i]! !== prev) {
+        changedCells.push(i);
+      }
+    }
+
+    if (changedCells.length === 0) return null;
+
+    return {
+      cellIndex: changedCells,
+      grid: SudokuGrid.fromValuesAndCandidateMasks(values, nextMasks),
+    };
+  };
+
+  // 行×数字ごとに初回のみ適用
   for (let r = 0; r < 9; r++) {
     const rowCells = sudokuRowCellIndices(r);
 
     for (let digit = 1; digit <= 9; digit++) {
       const bit = 1 << (digit - 1);
+      const elimBitsByCell = new Array<number>(81).fill(0);
 
       const blockSet = new Set<number>();
       for (const i of rowCells) {
@@ -79,19 +105,23 @@ function tryBoxLineReductionEliminationAfterPencil(
       const block = blockSet.values().next().value as number;
 
       for (const j of sudokuBlockCellIndices(block)) {
-        if (Math.floor(j / 9) === r) continue; // 当該行以外
+        if (Math.floor(j / 9) === r) continue;
         if (values[j] !== 0) continue;
         if (getMask(j) & bit) elimBitsByCell[j] |= bit;
       }
+
+      const hit = buildResultFromElim(elimBitsByCell);
+      if (hit) return hit;
     }
   }
 
-  // 列ベース（列→ブロック）
+  // 列×数字ごとに初回のみ適用
   for (let c = 0; c < 9; c++) {
     const colCells = sudokuColCellIndices(c);
 
     for (let digit = 1; digit <= 9; digit++) {
       const bit = 1 << (digit - 1);
+      const elimBitsByCell = new Array<number>(81).fill(0);
 
       const blockSet = new Set<number>();
       for (const i of colCells) {
@@ -103,32 +133,16 @@ function tryBoxLineReductionEliminationAfterPencil(
       const block = blockSet.values().next().value as number;
 
       for (const j of sudokuBlockCellIndices(block)) {
-        if ((j % 9) === c) continue; // 当該列以外
+        if ((j % 9) === c) continue;
         if (values[j] !== 0) continue;
         if (getMask(j) & bit) elimBitsByCell[j] |= bit;
       }
+
+      const hit = buildResultFromElim(elimBitsByCell);
+      if (hit) return hit;
     }
   }
 
-  const nextMasks = Array.from({ length: 81 }, (__, i) => {
-    if (values[i] !== 0) return 0;
-    return getMask(i) & ~elimBitsByCell[i]!;
-  });
-
-  const changedCells: number[] = [];
-  for (let i = 0; i < 81; i++) {
-    if (values[i] !== 0) continue;
-    const prev = grid.cellAt(i).memoMask & 0x1ff;
-    if (nextMasks[i]! !== prev) {
-      changedCells.push(i);
-    }
-  }
-
-  if (changedCells.length === 0) return null;
-
-  return {
-    cellIndex: changedCells,
-    grid: SudokuGrid.fromValuesAndCandidateMasks(values, nextMasks),
-  };
+  return null;
 }
 
