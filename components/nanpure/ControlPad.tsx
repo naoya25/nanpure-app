@@ -26,6 +26,7 @@ type ControlPadProps = {
   onApplyTechnique: (techniqueId: TechniqueId) => void;
   selectedTechniqueIds: ReadonlySet<TechniqueId>;
   onToggleTechniqueSelection: (techniqueId: TechniqueId) => void;
+  onSelectAllTechniqueSelections: () => void;
   onAutoRunTechniques: () => void;
   canAutoRunTechniques: boolean;
   techniqueButtons: readonly TechniqueDescriptor[];
@@ -54,6 +55,7 @@ export function ControlPad({
   onApplyTechnique,
   selectedTechniqueIds,
   onToggleTechniqueSelection,
+  onSelectAllTechniqueSelections,
   onAutoRunTechniques,
   canAutoRunTechniques,
   techniqueButtons,
@@ -180,6 +182,7 @@ export function ControlPad({
           techniques={techniqueButtons}
           selectedTechniqueIds={selectedTechniqueIds}
           onToggleTechniqueSelection={onToggleTechniqueSelection}
+          onSelectAllTechniqueSelections={onSelectAllTechniqueSelections}
           onRun={onAutoRunTechniques}
           canRun={canAutoRunTechniques}
           onClose={onCloseAutoRunList}

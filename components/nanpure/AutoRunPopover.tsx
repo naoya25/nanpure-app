@@ -8,6 +8,7 @@ type AutoRunPopoverProps = {
   techniques: readonly TechniqueDescriptor[];
   selectedTechniqueIds: ReadonlySet<TechniqueId>;
   onToggleTechniqueSelection: (techniqueId: TechniqueId) => void;
+  onSelectAllTechniqueSelections: () => void;
   onRun: () => void;
   canRun: boolean;
   onClose: () => void;
@@ -19,6 +20,7 @@ export function AutoRunPopover({
   techniques,
   selectedTechniqueIds,
   onToggleTechniqueSelection,
+  onSelectAllTechniqueSelections,
   onRun,
   canRun,
   onClose,
@@ -60,14 +62,24 @@ export function AutoRunPopover({
     >
       <div className="mb-3 flex items-center justify-between gap-2">
         <p className="text-sm font-semibold text-zinc-900">自動実行の選択</p>
-        <button
-          type="button"
-          onClick={onClose}
-          onFocus={onFocusAnyControl}
-          className="rounded-md border border-zinc-300 bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
-        >
-          閉じる
-        </button>
+        <div className="flex items-center gap-1.5">
+          <button
+            type="button"
+            onClick={onSelectAllTechniqueSelections}
+            onFocus={onFocusAnyControl}
+            className="rounded-md border border-zinc-300 bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
+          >
+            全てにチェック
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            onFocus={onFocusAnyControl}
+            className="rounded-md border border-zinc-300 bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
+          >
+            閉じる
+          </button>
+        </div>
       </div>
       <p className="mb-2 text-xs text-zinc-500">
         チェックしたテクニックだけを、定義順（難易度順）で繰り返し適用します。

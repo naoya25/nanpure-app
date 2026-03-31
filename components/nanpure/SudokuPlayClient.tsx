@@ -201,6 +201,10 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
     [],
   );
 
+  const selectAllTechniqueSelectionsForAuto = useCallback(() => {
+    setSelectedTechniqueIdsForAuto(new Set(TECHNIQUE_LABELS.map((t) => t.id)));
+  }, []);
+
   const applyTechniquesAuto = useCallback(() => {
     if (phase !== "playing") return;
     const ids = Array.from(selectedTechniqueIdsForAuto);
@@ -465,6 +469,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
             onApplyTechnique={applyTechnique}
             selectedTechniqueIds={selectedTechniqueIdsForAuto}
             onToggleTechniqueSelection={toggleTechniqueSelectionForAuto}
+            onSelectAllTechniqueSelections={selectAllTechniqueSelectionsForAuto}
             onAutoRunTechniques={applyTechniquesAuto}
             canAutoRunTechniques={false}
             techniqueButtons={techniqueButtons}
@@ -560,6 +565,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
           onApplyTechnique={applyTechnique}
           selectedTechniqueIds={selectedTechniqueIdsForAuto}
           onToggleTechniqueSelection={toggleTechniqueSelectionForAuto}
+          onSelectAllTechniqueSelections={selectAllTechniqueSelectionsForAuto}
           onAutoRunTechniques={applyTechniquesAuto}
           canAutoRunTechniques={
             phase === "playing" && selectedTechniqueIdsForAuto.size > 0
