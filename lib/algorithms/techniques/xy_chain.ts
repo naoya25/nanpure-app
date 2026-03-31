@@ -77,8 +77,10 @@ export function tryXYChainStep(grid: SudokuGrid): TechniqueApplyResult | null {
           used.add(next);
           path.push(next);
 
-          // close chain: endpoint has targetBit again
-          if (path.length >= 3 && (nMask & targetBit) !== 0) {
+          // close chain:
+          // current -> next は carryBit 共有の弱リンクなので、next で真になるのは nextCarry 側。
+          // よって終端は「targetBit を含む」だけでは不十分で、nextCarry === targetBit が必要。
+          if (path.length >= 3 && nextCarry === targetBit) {
             const hit = applyEliminationSeeingBothEnds(
               grid,
               values,
