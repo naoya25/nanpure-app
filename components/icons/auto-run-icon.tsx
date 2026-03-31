@@ -1,4 +1,4 @@
-/** テクニック自動運行（繰り返し適用） */
+/** テクニック自動実行（繰り返し適用） */
 export function AutoRunIcon({ className }: { className?: string }) {
   return (
     <svg

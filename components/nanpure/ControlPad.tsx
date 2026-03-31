@@ -161,8 +161,8 @@ export function ControlPad({
             onFocus={onFocusAnyControl}
             aria-expanded={showAutoRunList ? "true" : undefined}
             disabled={inputLocked || !isPlaying}
-            title="テクニック自動運行の設定"
-            aria-label="テクニック自動運行の設定"
+            title="テクニック自動実行の設定"
+            aria-label="テクニック自動実行の設定"
             className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-50 text-zinc-700 active:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-100"
           >
             <AutoRunIcon className="h-5 w-5 sm:h-6 sm:w-6" />

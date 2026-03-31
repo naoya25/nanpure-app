@@ -1,6 +1,6 @@
-import type {
-  TechniqueDescriptor,
+import {
   TechniqueId,
+  type TechniqueDescriptor,
 } from "@/lib/types/sudoku_technique_types";
 
 type AutoRunPopoverProps = {
@@ -26,6 +26,30 @@ export function AutoRunPopover({
 }: AutoRunPopoverProps) {
   if (!open) return null;
 
+  const pencilIdx = techniques.findIndex((t) => t.id === TechniqueId.PENCIL_MARK);
+  const techniquesThroughPencil =
+    pencilIdx >= 0 ? techniques.slice(0, pencilIdx + 1) : techniques;
+  const techniquesAfterPencil =
+    pencilIdx >= 0 ? techniques.slice(pencilIdx + 1) : [];
+
+  const renderCheckboxRow = (t: TechniqueDescriptor) => (
+    <li
+      key={t.id}
+      className="flex items-center rounded-md border border-zinc-100 bg-zinc-50/80 px-2 py-2"
+    >
+      <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-sm text-zinc-800">
+        <input
+          type="checkbox"
+          checked={selectedTechniqueIds.has(t.id)}
+          onChange={() => onToggleTechniqueSelection(t.id)}
+          onFocus={onFocusAnyControl}
+          className="h-4 w-4 shrink-0 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-400"
+        />
+        <span className="font-medium">{t.label}</span>
+      </label>
+    </li>
+  );
+
   return (
     <div
       className={[
@@ -35,7 +59,7 @@ export function AutoRunPopover({
       ].join(" ")}
     >
       <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-zinc-900">自動運行の選択</p>
+        <p className="text-sm font-semibold text-zinc-900">自動実行の選択</p>
         <button
           type="button"
           onClick={onClose}
@@ -49,23 +73,17 @@ export function AutoRunPopover({
         チェックしたテクニックだけを、定義順（難易度順）で繰り返し適用します。
       </p>
       <ul className="mb-3 flex flex-col gap-2">
-        {techniques.map((t) => (
-          <li
-            key={t.id}
-            className="flex items-center rounded-md border border-zinc-100 bg-zinc-50/80 px-2 py-2"
-          >
-            <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 text-sm text-zinc-800">
-              <input
-                type="checkbox"
-                checked={selectedTechniqueIds.has(t.id)}
-                onChange={() => onToggleTechniqueSelection(t.id)}
-                onFocus={onFocusAnyControl}
-                className="h-4 w-4 shrink-0 rounded border-zinc-300 text-zinc-900 focus:ring-zinc-400"
-              />
-              <span className="font-medium">{t.label}</span>
-            </label>
+        {techniquesThroughPencil.map(renderCheckboxRow)}
+        {techniquesAfterPencil.length > 0 ? (
+          <li className="list-none py-1">
+            <div className="border-t border-zinc-200 pt-3">
+              <p className="mb-2 text-xs leading-snug text-zinc-500">
+                以下は、空マスすべてにペンシルマーク（メモ）がある前提です。
+              </p>
+            </div>
           </li>
-        ))}
+        ) : null}
+        {techniquesAfterPencil.map(renderCheckboxRow)}
       </ul>
       <button
         type="button"

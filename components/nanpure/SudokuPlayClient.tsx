@@ -13,7 +13,7 @@ import {
 } from "@/lib/models/sudoku_technique_runner";
 import {
   TECHNIQUE_LABELS,
-  type TechniqueId,
+  TechniqueId,
 } from "@/lib/types/sudoku_technique_types";
 import { parsePuzzle81 } from "@/lib/validates/grid";
 import {
@@ -42,6 +42,18 @@ function digitFromKeyboardEvent(e: KeyboardEvent): number | null {
   return null;
 }
 
+/** 自動実行の既定チェック: ペンシルマークまで（メモ前提テクニックはオフ） */
+function initialAutoRunTechniqueSelection(): ReadonlySet<TechniqueId> {
+  const pencilIdx = TECHNIQUE_LABELS.findIndex(
+    (t) => t.id === TechniqueId.PENCIL_MARK,
+  );
+  const throughPencil =
+    pencilIdx >= 0
+      ? TECHNIQUE_LABELS.slice(0, pencilIdx + 1)
+      : TECHNIQUE_LABELS;
+  return new Set(throughPencil.map((t) => t.id));
+}
+
 export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
   const { values: seedValues, fixed } = useMemo(
     () => parsePuzzle81(puzzle.puzzle_81),
@@ -64,9 +76,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
   const [techniqueHighlightedCells, setTechniqueHighlightedCells] =
     useState<ReadonlySet<number> | null>(null);
   const [selectedTechniqueIdsForAuto, setSelectedTechniqueIdsForAuto] =
-    useState<ReadonlySet<TechniqueId>>(
-      () => new Set(TECHNIQUE_LABELS.map((t) => t.id)),
-    );
+    useState<ReadonlySet<TechniqueId>>(initialAutoRunTechniqueSelection);
 
   const techniqueButtons = TECHNIQUE_LABELS;
 
