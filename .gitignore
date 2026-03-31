@@ -40,6 +40,4 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-AGENTS.md
-
 scripts/hoge.ts
