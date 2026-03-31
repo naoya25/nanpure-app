@@ -46,6 +46,7 @@ import { tryBugPlusOneStep } from "@/lib/algorithms/techniques/bug_plus_one";
 import { tryXChainStep } from "@/lib/algorithms/techniques/x_chain";
 import { tryXYChainStep } from "@/lib/algorithms/techniques/xy_chain";
 import { tryXCycleStep } from "@/lib/algorithms/techniques/x_cycle";
+import { tryAicStep } from "@/lib/algorithms/techniques/aic";
 
 type TryTechnique = (
   grid: SudokuGrid,
@@ -81,6 +82,7 @@ const TRY_BY_ID: Record<TechniqueId, TryTechnique> = {
   [TechniqueId.XY_CHAIN]: (grid) => tryXYChainStep(grid),
   [TechniqueId.X_CHAIN]: (grid) => tryXChainStep(grid),
   [TechniqueId.X_CYCLE]: (grid) => tryXCycleStep(grid),
+  [TechniqueId.AIC]: (grid) => tryAicStep(grid),
   [TechniqueId.FISH_44]: (grid) => tryFish44Step(grid),
   [TechniqueId.FISH_55]: (grid) => tryFish55Step(grid),
   [TechniqueId.FISH_66]: (grid) => tryFish66Step(grid),
