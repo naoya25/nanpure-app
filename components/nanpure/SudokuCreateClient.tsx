@@ -18,6 +18,15 @@ function digitFromKeyboardEvent(e: KeyboardEvent): number | null {
 
 const EMPTY_VALUES = Array<number>(81).fill(0);
 
+function isTypingInFormField(target: EventTarget | null): boolean {
+  return (
+    target instanceof HTMLInputElement ||
+    target instanceof HTMLTextAreaElement ||
+    target instanceof HTMLSelectElement ||
+    (target instanceof HTMLElement && target.isContentEditable)
+  );
+}
+
 export function SudokuCreateClient() {
   const [board, setBoard] = useState(() => SudokuGrid.fromValues(EMPTY_VALUES));
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -111,6 +120,8 @@ export function SudokuCreateClient() {
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      // 盤用ショートカットが textarea 等の入力を奪わないようにする
+      if (isTypingInFormField(e.target)) return;
 
       const digit = digitFromKeyboardEvent(e);
       if (digit !== null) {
