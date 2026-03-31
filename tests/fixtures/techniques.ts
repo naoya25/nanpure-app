@@ -365,6 +365,37 @@ export const TECHNIQUE_CASES: TechniqueCaseBase[] = [
     },
   },
   {
+    name: "skyscraper 1 (synthetic / digit 9 rows 0–1; roofs (0,0)(1,2); elim block 0 except floors/roofs)",
+    techniqueId: TechniqueId.SKYSCRAPER,
+    input: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        const no9 = 511 - 256;
+        if (r === 0 && (c === 0 || c === 1)) return 511;
+        if (r === 0) return no9;
+        if (r === 1 && (c === 1 || c === 2)) return 511;
+        if (r === 1) return no9;
+        return 511;
+      }),
+    },
+    expected: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        const no9 = 511 - 256;
+        if (r === 0 && (c === 0 || c === 1)) return 511;
+        if (r === 0) return no9;
+        if (r === 1 && (c === 1 || c === 2)) return 511;
+        if (r === 1) return no9;
+        if (i === 18 || i === 19 || i === 20) return no9;
+        return 511;
+      }),
+    },
+  },
+  {
     name: "fish33 1 (SudokuWiki Swordfish / after pencil)",
     techniqueId: TechniqueId.FISH_33,
     input: {
