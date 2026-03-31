@@ -16,6 +16,13 @@ export enum TechniqueId {
   HIDDEN_PAIR = "HIDDEN_PAIR",
   HIDDEN_TRIPLE = "HIDDEN_TRIPLE",
   HIDDEN_QUAD = "HIDDEN_QUAD",
+  FISH_22 = "FISH_22",
+  FISH_33 = "FISH_33",
+  FISH_44 = "FISH_44",
+  FISH_55 = "FISH_55",
+  FISH_66 = "FISH_66",
+  FISH_77 = "FISH_77",
+  FISH_88 = "FISH_88",
 }
 
 export type TechniqueDescriptor = {
@@ -38,6 +45,13 @@ export const TECHNIQUE_LABELS = [
   { id: TechniqueId.HIDDEN_PAIR, label: "隠れペア" },
   { id: TechniqueId.HIDDEN_TRIPLE, label: "隠れトリプル" },
   { id: TechniqueId.HIDDEN_QUAD, label: "隠れクァッド" },
+  { id: TechniqueId.FISH_22, label: "fish22（X-Wing）" },
+  { id: TechniqueId.FISH_33, label: "fish33（Swordfish）" },
+  { id: TechniqueId.FISH_44, label: "fish44（Jellyfish）" },
+  { id: TechniqueId.FISH_55, label: "fish55" },
+  { id: TechniqueId.FISH_66, label: "fish66" },
+  { id: TechniqueId.FISH_77, label: "fish77" },
+  { id: TechniqueId.FISH_88, label: "fish88" },
 ] as const satisfies readonly TechniqueDescriptor[];
 
 export type TechniqueStepResult =
