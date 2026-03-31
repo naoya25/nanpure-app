@@ -396,6 +396,36 @@ export const TECHNIQUE_CASES: TechniqueCaseBase[] = [
     },
   },
   {
+    name: "twoStringKite 1 (synthetic / digit 9; row0 + col2, elim at r4c4)",
+    techniqueId: TechniqueId.TWO_STRING_KITE,
+    input: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        const no9 = 511 - 256;
+
+        if (r === 0 && (c === 0 || c === 4)) return 511; // row strong link
+        if (c === 2 && (r === 1 || r === 4)) return 511; // column strong link
+        if (r === 4 && c === 4) return 511; // sees both kite ends
+        return no9;
+      }),
+    },
+    expected: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        const no9 = 511 - 256;
+
+        if (r === 0 && (c === 0 || c === 4)) return 511;
+        if (c === 2 && (r === 1 || r === 4)) return 511;
+        if (r === 4 && c === 4) return no9;
+        return no9;
+      }),
+    },
+  },
+  {
     name: "fish33 1 (SudokuWiki Swordfish / after pencil)",
     techniqueId: TechniqueId.FISH_33,
     input: {

@@ -33,6 +33,7 @@ import {
   tryFish88Step,
 } from "@/lib/algorithms/techniques/fish";
 import { trySkyscraperStep } from "@/lib/algorithms/techniques/skyscraper";
+import { tryTwoStringKiteStep } from "@/lib/algorithms/techniques/two_string_kite";
 
 type TryTechnique = (
   grid: SudokuGrid,
@@ -57,6 +58,7 @@ const TRY_BY_ID: Record<TechniqueId, TryTechnique> = {
   [TechniqueId.FISH_22]: (grid) => tryFish22Step(grid),
   [TechniqueId.FISH_33]: (grid) => tryFish33Step(grid),
   [TechniqueId.SKYSCRAPER]: (grid) => trySkyscraperStep(grid),
+  [TechniqueId.TWO_STRING_KITE]: (grid) => tryTwoStringKiteStep(grid),
   [TechniqueId.FISH_44]: (grid) => tryFish44Step(grid),
   [TechniqueId.FISH_55]: (grid) => tryFish55Step(grid),
   [TechniqueId.FISH_66]: (grid) => tryFish66Step(grid),
