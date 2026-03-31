@@ -607,6 +607,40 @@ export const TECHNIQUE_CASES: TechniqueCaseBase[] = [
     },
   },
   {
+    name: "bugPlus1 1 (synthetic / one tri-value cell, keep digit 3 at r0c0)",
+    techniqueId: TechniqueId.BUG_PLUS_1,
+    input: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        if (r === 0 && c === 0) return 7; // {1,2,3} bug cell
+        if (r === 0 && c === 4) return 5; // {1,3}
+        if (r === 0 && c === 8) return 6; // {2,3}
+        if (r === 4 && c === 0) return 5; // {1,3}
+        if (r === 8 && c === 0) return 6; // {2,3}
+        if (r === 1 && c === 1) return 5; // {1,3}
+        if (r === 2 && c === 2) return 6; // {2,3}
+        return 3; // default {1,2} (bivalue)
+      }),
+    },
+    expected: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        if (r === 0 && c === 0) return 4; // {3}
+        if (r === 0 && c === 4) return 5;
+        if (r === 0 && c === 8) return 6;
+        if (r === 4 && c === 0) return 5;
+        if (r === 8 && c === 0) return 6;
+        if (r === 1 && c === 1) return 5;
+        if (r === 2 && c === 2) return 6;
+        return 3;
+      }),
+    },
+  },
+  {
     name: "fish33 1 (SudokuWiki Swordfish / after pencil)",
     techniqueId: TechniqueId.FISH_33,
     input: {
