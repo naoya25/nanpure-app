@@ -49,3 +49,57 @@ export function parsePuzzle81(puzzle81: string): ParsedPuzzle {
   const fixed = values.map((v) => v !== 0);
   return { values, fixed };
 }
+
+/**
+ * 盤面作成など用。`candidateMasks81`（81 個の候補ビットマスク）を文字列からパースする。
+ * - JSON 配列（例: `[0, 324, 511, ...]`）
+ * - カンマ・空白・改行混在の整数列（ログや CSV からの貼り付け向け）
+ *
+ * 各値は下位 9 ビット（0〜511）だけ採用する。要素数が 81 でなければ例外。
+ */
+export function parseCandidateMasks81String(input: string): number[] {
+  const t = input.trim();
+  if (t.length === 0) {
+    throw new Error("候補マスクの入力が空です。");
+  }
+
+  let nums: number[];
+  if (t.startsWith("[")) {
+    let parsed: unknown;
+    try {
+      parsed = JSON.parse(t) as unknown;
+    } catch {
+      throw new Error("候補マスクの JSON が不正です。");
+    }
+    if (!Array.isArray(parsed)) {
+      throw new Error("候補マスクは JSON では数値の配列である必要があります。");
+    }
+    nums = parsed.map((item, i) => {
+      const n =
+        typeof item === "number" && Number.isInteger(item)
+          ? item
+          : Number.parseInt(String(item), 10);
+      if (!Number.isFinite(n) || !Number.isInteger(n)) {
+        throw new Error(`候補マスクのインデックス ${i} が整数ではありません。`);
+      }
+      return n;
+    });
+  } else {
+    const matches = [...t.matchAll(/-?\d+/g)];
+    nums = matches.map((m, i) => {
+      const n = Number.parseInt(m[0]!, 10);
+      if (!Number.isFinite(n)) {
+        throw new Error(`候補マスクの数値の抽出に失敗しました（位置 ${i}）。`);
+      }
+      return n;
+    });
+  }
+
+  if (nums.length !== SUDOKU_CELLS) {
+    throw new Error(
+      `候補マスクは ${SUDOKU_CELLS} 個の整数である必要があります（${nums.length} 個でした）。`,
+    );
+  }
+
+  return nums.map((n) => n & 0x1ff);
+}

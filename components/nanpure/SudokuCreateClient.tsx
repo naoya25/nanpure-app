@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { SudokuBoard } from "@/components/nanpure/SudokuBoard";
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
-import { parsePuzzle81 } from "@/lib/validates/grid";
+import { parseCandidateMasks81String, parsePuzzle81 } from "@/lib/validates/grid";
 
 function digitFromKeyboardEvent(e: KeyboardEvent): number | null {
   const row = /^Digit([1-9])$/.exec(e.code);
@@ -26,6 +26,10 @@ export function SudokuCreateClient() {
   const [values81InputError, setValues81InputError] = useState<string | null>(
     null,
   );
+  const [candidateMasks81Input, setCandidateMasks81Input] = useState("");
+  const [candidateMasks81InputError, setCandidateMasks81InputError] = useState<
+    string | null
+  >(null);
 
   const gridValues = useMemo(() => [...board.values()], [board]);
   const fixed = useMemo(() => Array<boolean>(81).fill(false), []);
@@ -76,6 +80,7 @@ export function SudokuCreateClient() {
     setBoard(SudokuGrid.fromValues(EMPTY_VALUES));
     setSelectedIndex(null);
     setValues81InputError(null);
+    setCandidateMasks81InputError(null);
   }, []);
 
   const applyValues81Input = useCallback(() => {
@@ -89,6 +94,19 @@ export function SudokuCreateClient() {
       setValues81InputError("81文字の 0〜9 で入力してください。");
     }
   }, [values81Input]);
+
+  const applyCandidateMasks81Input = useCallback(() => {
+    try {
+      const masks = parseCandidateMasks81String(candidateMasks81Input);
+      const values = [...board.values()];
+      setBoard(SudokuGrid.fromValuesAndCandidateMasks(values, masks));
+      setSelectedIndex(null);
+      setCandidateMasks81InputError(null);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "候補マスクの解析に失敗しました。";
+      setCandidateMasks81InputError(msg);
+    }
+  }, [board, candidateMasks81Input]);
 
   useEffect(() => {
     const onKeyDown = (e: KeyboardEvent) => {
@@ -219,7 +237,39 @@ export function SudokuCreateClient() {
           />
         </div>
         <div>
-          <p className="mb-1 text-sm font-medium text-zinc-800">candidateMasks81</p>
+          <p className="mb-1 text-sm font-medium text-zinc-800">
+            candidateMasks81 を入力して反映
+          </p>
+          <textarea
+            value={candidateMasks81Input}
+            onChange={(e) => {
+              setCandidateMasks81Input(e.target.value);
+              if (candidateMasks81InputError !== null) {
+                setCandidateMasks81InputError(null);
+              }
+            }}
+            placeholder='例: [0,324,323,...] または 324,323,0,...（81個・現在の確定値に上書き結合）'
+            className="h-28 w-full rounded-md border border-zinc-300 bg-white p-2 font-mono text-xs text-zinc-800"
+          />
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              onClick={applyCandidateMasks81Input}
+              className="rounded-md border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+            >
+              盤面に反映（メモ）
+            </button>
+            {candidateMasks81InputError ? (
+              <p className="text-xs text-red-600">{candidateMasks81InputError}</p>
+            ) : (
+              <p className="text-xs text-zinc-500">
+                確定マスはメモ無視（0 扱い）。空マスのみ候補が更新されます。
+              </p>
+            )}
+          </div>
+        </div>
+        <div>
+          <p className="mb-1 text-sm font-medium text-zinc-800">candidateMasks81（現在の盤）</p>
           <textarea
             readOnly
             value={candidateMasks81}
