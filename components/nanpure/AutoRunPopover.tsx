@@ -65,6 +65,15 @@ export function AutoRunPopover({
         <div className="flex items-center gap-1.5">
           <button
             type="button"
+            onClick={onRun}
+            onFocus={onFocusAnyControl}
+            disabled={!canRun}
+            className="rounded-md border border-zinc-300 bg-zinc-900 px-2 py-1 text-xs font-medium text-white hover:bg-zinc-800 disabled:pointer-events-none disabled:opacity-40"
+          >
+            実行
+          </button>
+          <button
+            type="button"
             onClick={onSelectAllTechniqueSelections}
             onFocus={onFocusAnyControl}
             className="rounded-md border border-zinc-300 bg-zinc-50 px-2 py-1 text-xs font-medium text-zinc-700 hover:bg-zinc-100"
@@ -97,15 +106,6 @@ export function AutoRunPopover({
         ) : null}
         {techniquesAfterPencil.map(renderCheckboxRow)}
       </ul>
-      <button
-        type="button"
-        onClick={onRun}
-        onFocus={onFocusAnyControl}
-        disabled={!canRun}
-        className="w-full rounded-md border border-zinc-300 bg-zinc-900 px-3 py-2 text-sm font-medium text-white hover:bg-zinc-800 disabled:pointer-events-none disabled:opacity-40"
-      >
-        自動適用
-      </button>
     </div>
   );
 }

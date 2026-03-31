@@ -1,10 +1,8 @@
 import { AutoRunIcon } from "@/components/icons/auto-run-icon";
 import { ClearSelectionIcon } from "@/components/icons/clear-selection-icon";
-import { PlayIcon } from "@/components/icons/play-icon";
 import { RedoIcon } from "@/components/icons/redo-icon";
 import { UndoIcon } from "@/components/icons/undo-icon";
 import { AutoRunPopover } from "@/components/nanpure/AutoRunPopover";
-import { TechniquePopover } from "@/components/nanpure/TechniquePopover";
 import type { TechniqueDescriptor, TechniqueId } from "@/lib/types/sudoku_technique_types";
 
 type ControlPadProps = {
@@ -17,13 +15,9 @@ type ControlPadProps = {
   onUndo: () => void;
   onRedo: () => void;
   onClearCell: () => void;
-  showTechniqueList: boolean;
-  onToggleTechniqueList: () => void;
-  onCloseTechniqueList: () => void;
   showAutoRunList: boolean;
   onToggleAutoRunList: () => void;
   onCloseAutoRunList: () => void;
-  onApplyTechnique: (techniqueId: TechniqueId) => void;
   selectedTechniqueIds: ReadonlySet<TechniqueId>;
   onToggleTechniqueSelection: (techniqueId: TechniqueId) => void;
   onSelectAllTechniqueSelections: () => void;
@@ -46,13 +40,9 @@ export function ControlPad({
   onUndo,
   onRedo,
   onClearCell,
-  showTechniqueList,
-  onToggleTechniqueList,
-  onCloseTechniqueList,
   showAutoRunList,
   onToggleAutoRunList,
   onCloseAutoRunList,
-  onApplyTechnique,
   selectedTechniqueIds,
   onToggleTechniqueSelection,
   onSelectAllTechniqueSelections,
@@ -147,18 +137,6 @@ export function ControlPad({
           </button>
           <button
             type="button"
-            onClick={onToggleTechniqueList}
-            onFocus={onFocusAnyControl}
-            aria-expanded={showTechniqueList ? "true" : undefined}
-            disabled={inputLocked || !isPlaying}
-            title="テクニックを実行"
-            aria-label="テクニックを実行"
-            className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-900 text-white active:bg-zinc-700 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-800"
-          >
-            <PlayIcon className="h-5 w-5 sm:h-6 sm:w-6" />
-          </button>
-          <button
-            type="button"
             onClick={onToggleAutoRunList}
             onFocus={onFocusAnyControl}
             aria-expanded={showAutoRunList ? "true" : undefined}
@@ -170,13 +148,6 @@ export function ControlPad({
             <AutoRunIcon className="h-5 w-5 sm:h-6 sm:w-6" />
           </button>
         </div>
-        <TechniquePopover
-          open={showTechniqueList}
-          techniques={techniqueButtons}
-          onClose={onCloseTechniqueList}
-          onApply={onApplyTechnique}
-          onFocusAnyControl={onFocusAnyControl}
-        />
         <AutoRunPopover
           open={showAutoRunList}
           techniques={techniqueButtons}
