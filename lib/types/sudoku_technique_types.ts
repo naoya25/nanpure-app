@@ -5,7 +5,6 @@ export enum TechniqueId {
   FULL_HOUSE = "FULL_HOUSE",
   SINGLE = "SINGLE",
   HIDDEN_SINGLE = "HIDDEN_SINGLE",
-  SOLUTION_SYNC = "SOLUTION_SYNC",
   PENCIL_MARK = "PENCIL_MARK",
   MEMO_SINGLE = "MEMO_SINGLE",
   POINTING = "POINTING",
@@ -48,7 +47,6 @@ export const TECHNIQUE_LABELS = [
   { id: TechniqueId.FULL_HOUSE, label: "フルハウス" },
   { id: TechniqueId.SINGLE, label: "シングル" },
   { id: TechniqueId.HIDDEN_SINGLE, label: "隠れシングル" },
-  { id: TechniqueId.SOLUTION_SYNC, label: "正解同期" },
   { id: TechniqueId.PENCIL_MARK, label: "ペンシルマーク" },
   { id: TechniqueId.MEMO_SINGLE, label: "メモ1確定" },
   { id: TechniqueId.POINTING, label: "ポインティング" },
@@ -112,4 +110,5 @@ export type TechniqueAutoRunResult = {
   grid: SudokuGrid;
   steps: TechniqueAutoRunStep[];
   finishedBecauseNoChange: boolean;
+  conflictCellIndex: number[] | null;
 };

@@ -7,7 +7,7 @@ import {
 const DIGITS_1_9 = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
 
 /**
- * Fisher–Yates。`random` は [0, 1) の一様乱数（省略時は `Math.random`）。
+ * Fisher-Yates。`random` は [0, 1) の一様乱数（省略時は `Math.random`）。
  */
 export function shuffleArrayInPlace<T>(arr: T[], random: () => number = Math.random): void {
   for (let i = arr.length - 1; i > 0; i--) {
@@ -19,7 +19,7 @@ export function shuffleArrayInPlace<T>(arr: T[], random: () => number = Math.ran
 }
 
 /**
- * ブロック番号 0, 4, 8（対角の 3×3）だけに、それぞれ 1〜9 のランダムな並びを置いた初期盤面（他は `'0'`）。
+ * ブロック番号 0, 4, 8（対角の 3x3）だけに、それぞれ 1〜9 のランダムな並びを置いた初期盤面（他は `'0'`）。
  * `sample/create-sudoku.py` の `get_init_grid` と同じ構造。
  */
 export function createSudokuDiagonalBlocksSeed(

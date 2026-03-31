@@ -1,4 +1,5 @@
 import type { SudokuGrid } from "@/lib/models/sudoku_grid";
+import { SUDOKU_CELLS } from "@/lib/validates/grid";
 import {
   TechniqueAutoRunResult,
   TechniqueApplyResult,
@@ -16,7 +17,6 @@ import { tryMemoSingleStep } from "@/lib/algorithms/techniques/memo_single";
 import { tryPencilMarkStep } from "@/lib/algorithms/techniques/pencil_mark";
 import { tryPointingStep } from "@/lib/algorithms/techniques/pointing";
 import { tryBoxLineReductionStep } from "@/lib/algorithms/techniques/box_line_reduction";
-import { trySolutionSyncStep } from "@/lib/algorithms/techniques/solution_sync";
 import { trySingleStep } from "@/lib/algorithms/techniques/single";
 import {
   tryPairStep,
@@ -58,7 +58,6 @@ const TRY_BY_ID: Record<TechniqueId, TryTechnique> = {
   [TechniqueId.FULL_HOUSE]: tryFullHouseStep,
   [TechniqueId.SINGLE]: trySingleStep,
   [TechniqueId.HIDDEN_SINGLE]: tryHiddenSingleStep,
-  [TechniqueId.SOLUTION_SYNC]: trySolutionSyncStep,
   [TechniqueId.PENCIL_MARK]: (grid) => tryPencilMarkStep(grid),
   [TechniqueId.MEMO_SINGLE]: tryMemoSingleStep,
   [TechniqueId.POINTING]: (grid) => tryPointingStep(grid),
@@ -119,18 +118,44 @@ export function runTechniqueAutoUntilNoChange(
 ): TechniqueAutoRunResult {
   const ordered = sortByTechniqueOrder(selectedTechniqueIds);
   if (ordered.length === 0) {
-    return { grid, steps: [], finishedBecauseNoChange: true };
+    return { grid, steps: [], finishedBecauseNoChange: true, conflictCellIndex: null };
   }
 
   let nextGrid = grid;
   const steps: TechniqueAutoRunResult["steps"] = [];
+  const getConflictCellIndex = (current: SudokuGrid): number[] | null => {
+    if (!solution81) return null;
+    const conflicts: number[] = [];
+    for (let i = 0; i < SUDOKU_CELLS; i++) {
+      const value = current.cellAt(i).value;
+      if (value === 0) continue;
+      const solutionDigit = Number(solution81[i] ?? "0");
+      if (solutionDigit < 1 || solutionDigit > 9) {
+        return null;
+      }
+      if (value !== solutionDigit) {
+        conflicts.push(i);
+      }
+    }
+    return conflicts.length > 0 ? conflicts : null;
+  };
 
   // 反復上限は安全弁。通常は「易→難を一周して適用なし」で終了する。
   const maxTryOneTechnique = 81 * 9 * ordered.length;
   let i = 0;
   for (let guard = 0; guard < maxTryOneTechnique; guard++) {
+    const beforeConflict = getConflictCellIndex(nextGrid);
+    if (beforeConflict) {
+      return {
+        grid: nextGrid,
+        steps,
+        finishedBecauseNoChange: false,
+        conflictCellIndex: beforeConflict,
+      };
+    }
+
     if (i >= ordered.length) {
-      return { grid: nextGrid, steps, finishedBecauseNoChange: true };
+      return { grid: nextGrid, steps, finishedBecauseNoChange: true, conflictCellIndex: null };
     }
 
     const techniqueId = ordered[i];
@@ -142,11 +167,20 @@ export function runTechniqueAutoUntilNoChange(
         cellIndex: result.cellIndex,
         grid: result.grid,
       });
+      const afterConflict = getConflictCellIndex(nextGrid);
+      if (afterConflict) {
+        return {
+          grid: nextGrid,
+          steps,
+          finishedBecauseNoChange: false,
+          conflictCellIndex: afterConflict,
+        };
+      }
       i = 0;
     } else {
       i += 1;
     }
   }
 
-  return { grid: nextGrid, steps, finishedBecauseNoChange: false };
+  return { grid: nextGrid, steps, finishedBecauseNoChange: false, conflictCellIndex: null };
 }

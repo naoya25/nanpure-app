@@ -13,7 +13,7 @@ import { createClient } from "@supabase/supabase-js";
 import { config as loadDotenv } from "dotenv";
 
 import { insertPuzzleRow } from "@/lib/repositories/insert_puzzle_row";
-import { generateSudokuPuzzlePair } from "@/scripts/generate_sudoku";
+import { generateSudokuPuzzlePair } from "@/lib/algorithms/generate_sudoku";
 
 loadDotenv({ path: path.resolve(process.cwd(), ".env.local") });
 
