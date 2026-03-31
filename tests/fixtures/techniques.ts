@@ -709,6 +709,76 @@ export const TECHNIQUE_CASES: TechniqueCaseBase[] = [
     },
   },
   {
+    name: "xCycle 1 (synthetic / discontinuous weak-weak at r0c0, elim 9)",
+    techniqueId: TechniqueId.X_CYCLE,
+    input: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        if (r === 0 && c === 0) return 257; // A {1,9} target weak-weak node
+        if (r === 0 && c === 4) return 258; // B {2,9}
+        if (r === 4 && c === 4) return 260; // C {3,9}
+        if (r === 4 && c === 1) return 264; // D {4,9}
+        if (r === 1 && c === 1) return 272; // E {5,9}
+        if (r === 2 && c === 2) return 288; // extra in block0 (for weak E-A)
+        if (r === 0 && c === 8) return 320; // extra in row0 (for weak A-B)
+        if (r === 4 && c === 8) return 384; // extra in row4 (for weak C-D)
+        return 255; // default no 9
+      }),
+    },
+    expected: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        if (r === 0 && c === 0) return 1; // {1}
+        if (r === 0 && c === 4) return 258;
+        if (r === 4 && c === 4) return 260;
+        if (r === 4 && c === 1) return 264;
+        if (r === 1 && c === 1) return 272;
+        if (r === 2 && c === 2) return 288;
+        if (r === 0 && c === 8) return 320;
+        if (r === 4 && c === 8) return 384;
+        return 255;
+      }),
+    },
+  },
+  {
+    name: "xCycle 2 (synthetic / continuous weak edge in block0, elim block peers)",
+    techniqueId: TechniqueId.X_CYCLE,
+    input: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        if (r === 0 && c === 0) return 257; // A {1,9}
+        if (r === 0 && c === 1) return 258; // B {2,9}
+        if (r === 4 && c === 1) return 260; // C {3,9}
+        if (r === 4 && c === 0) return 264; // D {4,9}
+        if (r === 0 && c === 8) return 272; // keep A-B weak (row0 not strong)
+        if (r === 4 && c === 8) return 288; // keep C-D weak (row4 not strong)
+        if (r === 1 && c === 2) return 320; // block0 peer of A-B (should be eliminated)
+        return 255; // default no 9
+      }),
+    },
+    expected: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        if (r === 0 && c === 0) return 257;
+        if (r === 0 && c === 1) return 258;
+        if (r === 4 && c === 1) return 260;
+        if (r === 4 && c === 0) return 264;
+        if (r === 0 && c === 8) return 16; // 9 removed by weak edge A-B in row0
+        if (r === 4 && c === 8) return 32; // 9 removed by weak edge C-D in row4
+        if (r === 1 && c === 2) return 64; // 9 removed by weak edge A-B in block0
+        return 255;
+      }),
+    },
+  },
+  {
     name: "fish33 1 (SudokuWiki Swordfish / after pencil)",
     techniqueId: TechniqueId.FISH_33,
     input: {
