@@ -641,6 +641,46 @@ export const TECHNIQUE_CASES: TechniqueCaseBase[] = [
     },
   },
   {
+    name: "xChain 1 (synthetic / S-W-S-W-S on digit9, elim r1c1:9)",
+    techniqueId: TechniqueId.X_CHAIN,
+    input: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        if (r === 0 && c === 1) return 257; // A {1,9}
+        if (r === 0 && c === 5) return 272; // B {5,9}  strong with A (row0)
+        if (r === 4 && c === 5) return 288; // C {6,9}  weak with B (col5)
+        if (r === 4 && c === 7) return 320; // D {7,9}  strong with C (row4)
+        if (r === 2 && c === 7) return 384; // E {8,9}  weak with D (col7)
+        if (r === 2 && c === 2) return 258; // F {2,9}  strong with E (row2)
+        if (r === 8 && c === 5) return 260; // make col5 weak (not strong)
+        if (r === 7 && c === 7) return 264; // make col7 weak (not strong)
+        if (r === 8 && c === 1) return 265; // avoid unintended strong on col1
+        if (r === 1 && c === 1) return 511; // sees A and F -> remove 9
+        return 255; // default: no 9
+      }),
+    },
+    expected: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        if (r === 0 && c === 1) return 257;
+        if (r === 0 && c === 5) return 272;
+        if (r === 4 && c === 5) return 288;
+        if (r === 4 && c === 7) return 320;
+        if (r === 2 && c === 7) return 384;
+        if (r === 2 && c === 2) return 258;
+        if (r === 8 && c === 5) return 260;
+        if (r === 7 && c === 7) return 264;
+        if (r === 8 && c === 1) return 265;
+        if (r === 1 && c === 1) return 255;
+        return 255;
+      }),
+    },
+  },
+  {
     name: "fish33 1 (SudokuWiki Swordfish / after pencil)",
     techniqueId: TechniqueId.FISH_33,
     input: {
