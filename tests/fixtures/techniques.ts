@@ -426,6 +426,37 @@ export const TECHNIQUE_CASES: TechniqueCaseBase[] = [
     },
   },
   {
+    name: "turboFish 1 (synthetic / generalized strong-weak-strong with block)",
+    techniqueId: TechniqueId.TURBO_FISH,
+    input: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        const no9 = 511 - 256;
+
+        if (r === 0 && (c === 0 || c === 4)) return 511; // row strong link
+        if ((r === 3 && c === 3) || (r === 4 && c === 4)) return 511; // block strong link
+        if (r === 3 && c === 0) return 511; // candidate affected by another chain in this layout
+        return no9;
+      }),
+    },
+    expected: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        const no9 = 511 - 256;
+
+        if (r === 0 && (c === 0 || c === 4)) return 511;
+        if (r === 3 && c === 3) return 511;
+        if (r === 4 && c === 4) return no9;
+        if (r === 3 && c === 0) return 511;
+        return no9;
+      }),
+    },
+  },
+  {
     name: "fish33 1 (SudokuWiki Swordfish / after pencil)",
     techniqueId: TechniqueId.FISH_33,
     input: {
