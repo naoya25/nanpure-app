@@ -36,7 +36,8 @@
 | 中級     | 隠れクァッド                                   | 同上（4 種類・4 マス）。                                                                                              | -    | done     |
 | 中級     | fish22                                         | 某数字について 2 行×2 列（または転置）に候補が拘束する基本魚 → それ以外から削除。別名: **X-Wing**。                   | -    | done     |
 | 中級     | fish33                                         | 同上の 3×3。**Swordfish**。                                                                                           | -    | done     |
-| 中〜上級 | スカイスクレーパー／ツーストリングカイト       | 強いリンク 4 点に着目した単一数字の削除パターン（ツーロット入り魚などと関連）。                                       | -    | yet      |
+| 中級 | スカイスクレーパー                             | 某数字について、同一の行（または列）上の 2 本の強いリンクが、別の列（行）で「足」側のマスを共有する形 → 屋根から見えるマスで削除。 | -    | yet      |
+| 中級 | ツーストリング・カイト                         | 某数字について、ある行とある列にそれぞれ共役ペアがあり、交わるブロックのマスで繋がる凧形。凧の両端を同時に見るマスから当該数字を削除。 | -    | yet      |
 | 上級     | fish44                                         | 同上の 4×4。**Jellyfish**。                                                                                           | -    | done     |
 | 上級     | fish55                                         | 同上の 5×5（一般名は文献により異なる）。超大魚は超レア。                                                             | -    | done     |
 | 上級     | fish66                                         | 同上の 6×6。                                                                                                          | -    | done     |
@@ -56,5 +57,4 @@
 ## 参考（外部）
 
 - [HoDoKu – Solving Techniques Introduction](http://hodoku.sourceforge.net/en/tech_intro.php)
-- [SudokuWiki – Strategy List](https://www.sudokuwiki.org/Strategy_Expanded_List)（Andrew Stuart）
 - [Sudopedia – Category:Solving Techniques](http://www.sudopedia.org/wiki/Category:Solving_Techniques)
