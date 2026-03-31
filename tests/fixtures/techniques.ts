@@ -457,6 +457,98 @@ export const TECHNIQUE_CASES: TechniqueCaseBase[] = [
     },
   },
   {
+    name: "xyWing 1 (synthetic / pivot r0c0, wings r0c4 & r4c0, elim r4c4:3)",
+    techniqueId: TechniqueId.XY_WING,
+    input: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        const no3 = 511 - 4;
+        if (r === 0 && c === 0) return 3; // {1,2}
+        if (r === 0 && c === 4) return 5; // {1,3}
+        if (r === 4 && c === 0) return 6; // {2,3}
+        if (r === 4 && c === 4) return 511; // sees both wings
+        return no3;
+      }),
+    },
+    expected: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        const no3 = 511 - 4;
+        if (r === 0 && c === 0) return 3;
+        if (r === 0 && c === 4) return 5;
+        if (r === 4 && c === 0) return 6;
+        if (r === 4 && c === 4) return no3;
+        return no3;
+      }),
+    },
+  },
+  {
+    name: "xyzWing 1 (synthetic / pivot r1c1, wings in same block, elim r2c2:3)",
+    techniqueId: TechniqueId.XYZ_WING,
+    input: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        const no3 = 511 - 4;
+        if (r === 1 && c === 1) return 7; // {1,2,3}
+        if (r === 1 && c === 2) return 5; // {1,3}
+        if (r === 2 && c === 1) return 6; // {2,3}
+        if (r === 2 && c === 2) return 511; // sees pivot + both wings
+        return no3;
+      }),
+    },
+    expected: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        const no3 = 511 - 4;
+        if (r === 1 && c === 1) return 7;
+        if (r === 1 && c === 2) return 5;
+        if (r === 2 && c === 1) return 6;
+        if (r === 2 && c === 2) return no3;
+        return no3;
+      }),
+    },
+  },
+  {
+    name: "wxyzWing 1 (synthetic / ALS in block0, elim r1c4:4)",
+    techniqueId: TechniqueId.WXYZ_WING,
+    input: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        const no4 = 511 - 8;
+        if (r === 0 && c === 0) return 3; // {1,2}
+        if (r === 0 && c === 1) return 5; // {1,3} -> restricted candidate 1 in row0
+        if (r === 1 && c === 0) return 8; // {4}
+        if (r === 1 && c === 1) return 8; // {4}
+        if (r === 1 && c === 4) return 511; // sees both {2,4}/{3,4} cells (row1)
+        return no4;
+      }),
+    },
+    expected: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        const no4 = 511 - 8;
+        if (r === 0 && c === 0) return 3;
+        if (r === 0 && c === 1) return 5;
+        if (r === 1 && c === 0) return 8;
+        if (r === 1 && c === 1) return 8;
+        if (r === 1 && c === 4) return no4;
+        return no4;
+      }),
+    },
+  },
+  {
     name: "fish33 1 (SudokuWiki Swordfish / after pencil)",
     techniqueId: TechniqueId.FISH_33,
     input: {
