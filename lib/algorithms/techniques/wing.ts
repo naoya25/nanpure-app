@@ -222,3 +222,90 @@ export function tryWXYZWingStep(
 
   return null;
 }
+
+/**
+ * W-Wing:
+ * 同じ二値 {x,y} の 2 マス A/B（非ピア）と、digit x の強リンク C-D を使う。
+ * C が A を見て D が B を見る（または逆）なら、A/B の少なくとも一方が y となるため、
+ * A と B を同時に見るマスから y を削除する。
+ */
+export function tryWWingStep(grid: SudokuGrid): TechniqueApplyResult | null {
+  if (hasEmptyCellWithoutMemo(grid)) return null;
+  const values = [...grid.values()];
+  const getMask = makeGetMask(values, grid);
+
+  const bivalueCells: number[] = [];
+  for (let i = 0; i < 81; i++) {
+    if (values[i] !== 0) continue;
+    if (popcount9(getMask(i)) === 2) bivalueCells.push(i);
+  }
+
+  const strongLinksByDigit: Array<Array<readonly [number, number]>> = Array.from(
+    { length: 9 },
+    () => [],
+  );
+  for (let digit = 1; digit <= 9; digit++) {
+    const bit = 1 << (digit - 1);
+    const links: Array<readonly [number, number]> = [];
+    for (let r = 0; r < 9; r++) {
+      const cand = sudokuRowCellIndices(r).filter((i) => (getMask(i) & bit) !== 0);
+      if (cand.length === 2) links.push([cand[0]!, cand[1]!]);
+    }
+    for (let c = 0; c < 9; c++) {
+      const cand = sudokuColCellIndices(c).filter((i) => (getMask(i) & bit) !== 0);
+      if (cand.length === 2) links.push([cand[0]!, cand[1]!]);
+    }
+    for (let b = 0; b < 9; b++) {
+      const cand = sudokuBlockCellIndices(b).filter((i) => (getMask(i) & bit) !== 0);
+      if (cand.length === 2) links.push([cand[0]!, cand[1]!]);
+    }
+    strongLinksByDigit[digit - 1] = links;
+  }
+
+  for (let ia = 0; ia < bivalueCells.length; ia++) {
+    const a = bivalueCells[ia]!;
+    const ma = getMask(a);
+    for (let ib = ia + 1; ib < bivalueCells.length; ib++) {
+      const b = bivalueCells[ib]!;
+      if (ma !== getMask(b)) continue;
+      const peersA = new Set(sudokuPeerIndices(a));
+      if (peersA.has(b)) continue; // non-peer pair only
+
+      const bits = bitList(ma);
+      const x = bits[0]!;
+      const y = bits[1]!;
+      const xDigit = Math.log2(x) + 1;
+      const links = strongLinksByDigit[xDigit - 1]!;
+      const peersB = new Set(sudokuPeerIndices(b));
+
+      let linkFound = false;
+      for (const [c1, c2] of links) {
+        if (c1 === a || c1 === b || c2 === a || c2 === b) continue;
+        const direct = peersA.has(c1) && peersB.has(c2);
+        const reverse = peersA.has(c2) && peersB.has(c1);
+        if (direct || reverse) {
+          linkFound = true;
+          break;
+        }
+      }
+      if (!linkFound) continue;
+
+      const elimBitsByCell = new Array<number>(81).fill(0);
+      for (let i = 0; i < 81; i++) {
+        if (values[i] !== 0) continue;
+        if (i === a || i === b) continue;
+        if (!peersA.has(i) || !peersB.has(i)) continue;
+        if (getMask(i) & y) elimBitsByCell[i] |= y;
+      }
+      const hit = buildTechniqueResultFromElimBits(
+        grid,
+        values,
+        getMask,
+        elimBitsByCell,
+      );
+      if (hit) return hit;
+    }
+  }
+
+  return null;
+}

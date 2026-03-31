@@ -36,6 +36,7 @@ import { trySkyscraperStep } from "@/lib/algorithms/techniques/skyscraper";
 import { tryTwoStringKiteStep } from "@/lib/algorithms/techniques/two_string_kite";
 import { tryTurboFishStep } from "@/lib/algorithms/techniques/turbo_fish";
 import {
+  tryWWingStep,
   tryWXYZWingStep,
   tryXYWingStep,
   tryXYZWingStep,
@@ -69,6 +70,7 @@ const TRY_BY_ID: Record<TechniqueId, TryTechnique> = {
   [TechniqueId.XY_WING]: (grid) => tryXYWingStep(grid),
   [TechniqueId.XYZ_WING]: (grid) => tryXYZWingStep(grid),
   [TechniqueId.WXYZ_WING]: (grid) => tryWXYZWingStep(grid),
+  [TechniqueId.W_WING]: (grid) => tryWWingStep(grid),
   [TechniqueId.FISH_44]: (grid) => tryFish44Step(grid),
   [TechniqueId.FISH_55]: (grid) => tryFish55Step(grid),
   [TechniqueId.FISH_66]: (grid) => tryFish66Step(grid),

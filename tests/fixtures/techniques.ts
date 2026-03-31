@@ -549,6 +549,36 @@ export const TECHNIQUE_CASES: TechniqueCaseBase[] = [
     },
   },
   {
+    name: "wWing 1 (synthetic / pair {1,2}, strong-link on 1 in col2, elim r0c4:2)",
+    techniqueId: TechniqueId.W_WING,
+    input: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        if (r === 0 && c === 0) return 3; // A {1,2}
+        if (r === 4 && c === 4) return 3; // B {1,2}
+        if (r === 0 && c === 2) return 5; // C {1,3} (sees A)
+        if (r === 4 && c === 2) return 9; // D {1,4} (sees B)
+        if (r === 0 && c === 4) return 511; // sees A and B, candidate 2 removed
+        return 508; // no 1,2 by default
+      }),
+    },
+    expected: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        const r = Math.floor(i / 9);
+        const c = i % 9;
+        if (r === 0 && c === 0) return 3;
+        if (r === 4 && c === 4) return 3;
+        if (r === 0 && c === 2) return 5;
+        if (r === 4 && c === 2) return 9;
+        if (r === 0 && c === 4) return 509;
+        return 508;
+      }),
+    },
+  },
+  {
     name: "fish33 1 (SudokuWiki Swordfish / after pencil)",
     techniqueId: TechniqueId.FISH_33,
     input: {
