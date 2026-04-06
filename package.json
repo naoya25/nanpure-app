@@ -10,7 +10,9 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "create-puzzle": "tsx scripts/create-puzzle.ts",
-    "experiment-technique-stats": "tsx scripts/experiment-technique-stats.ts"
+    "experiment-technique-stats": "tsx scripts/experiment-technique-stats.ts",
+    "record-puzzle-solve-analyses": "tsx scripts/record-puzzle-solve-analyses.ts",
+    "recompute-puzzle-levels": "tsx scripts/recompute-puzzle-levels.ts"
   },
   "dependencies": {
     "@supabase/ssr": "^0.9.0",

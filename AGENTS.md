@@ -84,5 +84,5 @@
 ## 参照
 
 - **アーキテクチャ（着手前に必読・更新もここ）**: `docs/architecture.md`
-- DB 定義: `supabase/migrations/puzzles.sql`
+- DB 定義: `supabase/migrations/`（例: `puzzles.sql`, `puzzles_update_level_policy.sql`, `puzzle_solve_records.sql`）
 - 人間向けの起動・環境: `README.md`
