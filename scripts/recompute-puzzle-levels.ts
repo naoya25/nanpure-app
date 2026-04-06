@@ -1,5 +1,5 @@
 /**
- * DB の全ナンプレについてテクニック runner + 難易度スコアで `level`（1..100）を再計算して更新する。
+ * DB の全ナンプレについてテクニック runner + 難易度スコアで `level`（`PUZZLE_LEVEL_MIN`..`PUZZLE_LEVEL_MAX`）を再計算して更新する。
  *
  * 前提:
  * - `puzzles_update_level_policy.sql` を適用済み（anon の UPDATE 許可）
@@ -19,14 +19,15 @@ import { computeSudokuDifficultyScore } from "@/lib/algorithms/sudoku_difficulty
 import { list_puzzle_rows_minimal } from "@/lib/repositories/list_puzzle_rows_minimal";
 import { updatePuzzleLevel } from "@/lib/repositories/update_puzzle_level";
 import { summarizeTechniqueAutoRunFromStrings } from "@/lib/models/puzzle_technique_run_analysis";
+import { PUZZLE_LEVEL_MAX, PUZZLE_LEVEL_MIN } from "@/lib/types/puzzle";
 
 loadDotenv({ path: path.resolve(process.cwd(), ".env.local") });
 
 const DEFAULT_PAGE_SIZE = 200;
 
-/** `difficultyScore100` は 0〜100。DB の CHECK は 1..100 のため 0 のみ 1 に繰り上げ */
+/** 解けた 50〜100 / 未解決 100〜181 を DB の CHECK 範囲に収める（解けたで 0 だけ 1 に繰り上げ） */
 function toDbLevel(difficultyScore100: number): number {
-  return Math.max(1, Math.min(100, difficultyScore100));
+  return Math.max(PUZZLE_LEVEL_MIN, Math.min(PUZZLE_LEVEL_MAX, difficultyScore100));
 }
 
 function parseArgs(argv: string[]): { pageSize: number; dryRun: boolean } {
@@ -76,6 +77,7 @@ async function main(): Promise<void> {
       const score = computeSudokuDifficultyScore({
         techniqueStepCounts: summary.techniqueStepCounts,
         solved: summary.solved,
+        ...(summary.solved ? {} : { emptyCellsRemaining: summary.empty_cells_remaining }),
       });
       const level = toDbLevel(score.difficultyScore100);
       totalProcessed += 1;
@@ -87,7 +89,7 @@ async function main(): Promise<void> {
         );
         console.log(
           `[dry-run] id=${row.id} level->${level} score100=${score.difficultyScore100} ` +
-            `solved=${summary.solved} step_total=${stepTotal}`,
+            `solved=${summary.solved} empty=${summary.empty_cells_remaining} step_total=${stepTotal}`,
         );
         continue;
       }
