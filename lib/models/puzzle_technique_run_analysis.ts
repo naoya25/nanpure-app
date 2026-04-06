@@ -37,6 +37,37 @@ function toPartialCounts(counter: Record<TechniqueId, number>): TechniqueStepCou
   return out;
 }
 
+/** `insert_puzzle_solve_analysis_with_usage` 用。マスタ順・ステップ数 0 は載せない */
+export function techniqueStepCountsToUsageRows(
+  counts: TechniqueStepCounts,
+): { technique_id: TechniqueId; step_count: number }[] {
+  return TECHNIQUE_LABELS.map(({ id }) => ({
+    technique_id: id,
+    step_count: counts[id] ?? 0,
+  })).filter((r) => r.step_count > 0);
+}
+
+/** RPC 挿入に渡すメタ＋ usage（`puzzle_id` / `source` は呼び出し側） */
+export type PuzzleSolveAnalysisInsertBody = {
+  solved: boolean;
+  empty_cells_remaining: number;
+  finished_because_no_change: boolean;
+  conflict_cell_count: number;
+  usage: { technique_id: TechniqueId; step_count: number }[];
+};
+
+export function puzzleSolveAnalysisInsertBodyFromSummary(
+  summary: PuzzleTechniqueRunSummary,
+): PuzzleSolveAnalysisInsertBody {
+  return {
+    solved: summary.solved,
+    empty_cells_remaining: summary.empty_cells_remaining,
+    finished_because_no_change: summary.finished_because_no_change,
+    conflict_cell_count: summary.conflict_cell_count,
+    usage: techniqueStepCountsToUsageRows(summary.techniqueStepCounts),
+  };
+}
+
 /**
  * DB 行の `puzzle_81` / `solution_81` を入力に、全テクニック順の自動実行を 1 回行う。
  * CLI や難易度計算で共有する。

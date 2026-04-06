@@ -19,16 +19,11 @@ import { computeSudokuDifficultyScore } from "@/lib/algorithms/sudoku_difficulty
 import { list_puzzle_rows_minimal } from "@/lib/repositories/list_puzzle_rows_minimal";
 import { updatePuzzleLevel } from "@/lib/repositories/update_puzzle_level";
 import { summarizeTechniqueAutoRunFromStrings } from "@/lib/models/puzzle_technique_run_analysis";
-import { PUZZLE_LEVEL_MAX, PUZZLE_LEVEL_MIN } from "@/lib/types/puzzle";
+import { clampScoreToPuzzleLevel } from "@/lib/utils/puzzle_level";
 
 loadDotenv({ path: path.resolve(process.cwd(), ".env.local") });
 
 const DEFAULT_PAGE_SIZE = 200;
-
-/** 解けた 50〜100 / 未解決 100〜181 を DB の CHECK 範囲に収める（解けたで 0 だけ 1 に繰り上げ） */
-function toDbLevel(difficultyScore100: number): number {
-  return Math.max(PUZZLE_LEVEL_MIN, Math.min(PUZZLE_LEVEL_MAX, difficultyScore100));
-}
 
 function parseArgs(argv: string[]): { pageSize: number; dryRun: boolean } {
   const pageArg = argv.find((a) => a.startsWith("--page-size="));
@@ -79,7 +74,7 @@ async function main(): Promise<void> {
         solved: summary.solved,
         ...(summary.solved ? {} : { emptyCellsRemaining: summary.empty_cells_remaining }),
       });
-      const level = toDbLevel(score.difficultyScore100);
+      const level = clampScoreToPuzzleLevel(score.difficultyScore100);
       totalProcessed += 1;
 
       if (dryRun) {

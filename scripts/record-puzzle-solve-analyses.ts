@@ -23,8 +23,10 @@ import {
   list_puzzle_rows_minimal,
   type PuzzleRowMinimal,
 } from "@/lib/repositories/list_puzzle_rows_minimal";
-import { summarizeTechniqueAutoRunFromStrings } from "@/lib/models/puzzle_technique_run_analysis";
-import { TECHNIQUE_LABELS, type TechniqueId } from "@/lib/types/sudoku_technique_types";
+import {
+  puzzleSolveAnalysisInsertBodyFromSummary,
+  summarizeTechniqueAutoRunFromStrings,
+} from "@/lib/models/puzzle_technique_run_analysis";
 
 loadDotenv({ path: path.resolve(process.cwd(), ".env.local") });
 
@@ -59,30 +61,9 @@ function readSupabaseEnv(): { url: string; anonKey: string } {
   return { url, anonKey };
 }
 
-function usageRowsFromStepCounts(
-  counts: Partial<Record<TechniqueId, number>>,
-): { technique_id: TechniqueId; step_count: number }[] {
-  return TECHNIQUE_LABELS.map(({ id }) => ({
-    technique_id: id,
-    step_count: counts[id] ?? 0,
-  })).filter((r) => r.step_count > 0);
-}
-
-function analyzeOne(row: PuzzleRowMinimal): {
-  solved: boolean;
-  empty_cells_remaining: number;
-  finished_because_no_change: boolean;
-  conflict_cell_count: number;
-  usage: { technique_id: TechniqueId; step_count: number }[];
-} {
+function analyzeOne(row: PuzzleRowMinimal) {
   const s = summarizeTechniqueAutoRunFromStrings(row.puzzle_81, row.solution_81);
-  return {
-    solved: s.solved,
-    empty_cells_remaining: s.empty_cells_remaining,
-    finished_because_no_change: s.finished_because_no_change,
-    conflict_cell_count: s.conflict_cell_count,
-    usage: usageRowsFromStepCounts(s.techniqueStepCounts),
-  };
+  return puzzleSolveAnalysisInsertBodyFromSummary(s);
 }
 
 async function main(): Promise<void> {
