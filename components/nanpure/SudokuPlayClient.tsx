@@ -14,12 +14,35 @@ import {
   TECHNIQUE_LABELS,
   TechniqueId,
 } from "@/lib/types/sudoku_technique_types";
+import { techniqueIdWebSearchUrl } from "@/lib/utils/technique_web_search";
 import { parsePuzzle81 } from "@/lib/validates/grid";
 import {
   isBoardComplete,
   isBoardMatchingSolution,
   isEverySolutionCellForDigitFilled,
 } from "@/lib/validates/validate";
+
+function PuzzleDifficultyLine({ level }: { level: number }) {
+  return (
+    <p className="mt-1 text-sm tabular-nums text-zinc-600">Level: {level}</p>
+  );
+}
+
+function PresentTechniqueFootnote({ techniqueId }: { techniqueId: TechniqueId }) {
+  return (
+    <p className="mt-2 text-center text-xs text-zinc-500">
+      technique:{" "}
+      <a
+        href={techniqueIdWebSearchUrl(techniqueId)}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="font-mono text-zinc-700 underline decoration-zinc-400 underline-offset-2 hover:text-zinc-900"
+      >
+        {techniqueId}
+      </a>
+    </p>
+  );
+}
 
 export type SudokuPlayPuzzle = {
   id: string;
@@ -331,6 +354,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
             ? "すべてのマスが正解です。"
             : "マスはすべて埋まりましたが、どこかが正解と異なります。"}
         </p>
+        <PuzzleDifficultyLine level={puzzle.level} />
         <p className="mt-2 text-sm text-zinc-500">
           間違えた入力の回数（目安）:{" "}
           <span className="font-medium text-zinc-800">{mistakes}</span>
@@ -374,6 +398,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold text-zinc-900">ナンプレ</h1>
+            <PuzzleDifficultyLine level={puzzle.level} />
             {puzzle.description ? (
               <p className="mt-1 text-sm text-zinc-600">{puzzle.description}</p>
             ) : null}
@@ -406,9 +431,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
             techniqueHighlightedCells={techniqueHighlightedCells}
           />
           {history.presentTechniqueId ? (
-            <p className="mt-2 text-center text-xs text-zinc-500">
-              technique: {history.presentTechniqueId}
-            </p>
+            <PresentTechniqueFootnote techniqueId={history.presentTechniqueId} />
           ) : null}
           <ControlPad
             digitComplete={digitComplete}
@@ -443,6 +466,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-zinc-900">ナンプレ</h1>
+          <PuzzleDifficultyLine level={puzzle.level} />
           {puzzle.description ? (
             <p className="mt-1 text-sm text-zinc-600">{puzzle.description}</p>
           ) : null}
@@ -482,9 +506,7 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
           techniqueHighlightedCells={techniqueHighlightedCells}
         />
         {history.presentTechniqueId ? (
-          <p className="mt-2 text-center text-xs text-zinc-500">
-            technique: {history.presentTechniqueId}
-          </p>
+          <PresentTechniqueFootnote techniqueId={history.presentTechniqueId} />
         ) : null}
         <ControlPad
           digitComplete={digitComplete}

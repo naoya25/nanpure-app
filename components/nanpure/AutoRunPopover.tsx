@@ -53,15 +53,27 @@ export function AutoRunPopover({
   );
 
   return (
-    <div
-      className={[
-        "absolute left-1/2 top-full z-30 mt-2 w-[min(20rem,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] -translate-x-1/2",
-        "max-h-[min(70vh,22rem)] overflow-y-auto overscroll-contain",
-        "rounded-lg border border-zinc-200 bg-white p-3 shadow-lg",
-      ].join(" ")}
-    >
+    <>
+      <div
+        className="fixed inset-0 z-40 bg-zinc-950/40"
+        onClick={onClose}
+        aria-hidden
+      />
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auto-run-popover-title"
+        className={[
+          "fixed left-1/2 top-1/2 z-50 w-[min(20rem,calc(100vw-2rem))] max-w-[calc(100vw-2rem)] -translate-x-1/2 -translate-y-1/2",
+          "max-h-[min(85vh,28rem)] overflow-y-auto overscroll-contain",
+          "rounded-lg border border-zinc-200 bg-white p-3 shadow-lg",
+        ].join(" ")}
+        onClick={(e) => e.stopPropagation()}
+      >
       <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold text-zinc-900">自動実行の選択</p>
+        <p id="auto-run-popover-title" className="text-sm font-semibold text-zinc-900">
+          自動実行の選択
+        </p>
         <div className="flex items-center gap-1.5">
           <button
             type="button"
@@ -106,6 +118,7 @@ export function AutoRunPopover({
         ) : null}
         {techniquesAfterPencil.map(renderCheckboxRow)}
       </ul>
-    </div>
+      </div>
+    </>
   );
 }
