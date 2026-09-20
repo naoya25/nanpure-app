@@ -89,7 +89,18 @@ function initialAutoRunTechniqueSelection(): ReadonlySet<TechniqueId> {
   return new Set(throughPencil.map((t) => t.id));
 }
 
-export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
+/**
+ * `onRequestNewPuzzle` は `<Link href="/play">` の代わり。
+ * 現在の URL は `/play/?p=<81文字>` で pathname が同じため、Link では
+ * Next の router が同一ルートと見なして再マウントが起きず、何も起きない。
+ */
+export function SudokuPlayClient({
+  puzzle,
+  onRequestNewPuzzle,
+}: {
+  puzzle: SudokuPlayPuzzle;
+  onRequestNewPuzzle: () => void;
+}) {
   const { values: seedValues, fixed } = useMemo(
     () => parsePuzzle81(puzzle.puzzle_81),
     [puzzle.puzzle_81],
@@ -410,12 +421,13 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
               振り返る
             </button>
           ) : null}
-          <Link
-            href="/play"
+          <button
+            type="button"
+            onClick={onRequestNewPuzzle}
             className="inline-flex justify-center rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-800"
           >
             別の問題（ランダム）
-          </Link>
+          </button>
           <Link
             href="/"
             className="inline-flex justify-center rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
@@ -512,12 +524,13 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
             <span className="font-semibold text-zinc-900">{mistakes}</span>
           </p>
           <div className="mt-2 flex flex-col gap-1">
-            <Link
-              href="/play"
-              className="text-zinc-500 underline hover:text-zinc-800"
+            <button
+              type="button"
+              onClick={onRequestNewPuzzle}
+              className="text-left text-zinc-500 underline hover:text-zinc-800"
             >
               別の問題
-            </Link>
+            </button>
             <Link
               href="/"
               className="text-zinc-500 underline hover:text-zinc-800"

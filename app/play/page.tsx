@@ -119,6 +119,7 @@ export default function PlayPage() {
   return (
     <SudokuPlayClient
       key={state.puzzle_81}
+      onRequestNewPuzzle={retryWithRandomPuzzle}
       puzzle={{
         puzzle_81: state.puzzle_81,
         solution_81: state.solution_81,
