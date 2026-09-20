@@ -11,16 +11,25 @@ import {
   runTechniqueAutoUntilNoChange,
 } from "@/lib/models/sudoku_technique_runner";
 import {
+  deletePlayProgress,
+  loadPlayProgress,
+  savePlayProgress,
+  type PlayProgressEntry,
+} from "@/lib/storage/play_progress";
+import type { Puzzle } from "@/lib/types/puzzle";
+import {
   TECHNIQUE_LABELS,
   TechniqueId,
 } from "@/lib/types/sudoku_technique_types";
 import { techniqueIdWebSearchUrl } from "@/lib/utils/technique_web_search";
-import { parsePuzzle81 } from "@/lib/validates/grid";
+import { SUDOKU_CELLS, parsePuzzle81 } from "@/lib/validates/grid";
 import {
   isBoardComplete,
   isBoardMatchingSolution,
   isEverySolutionCellForDigitFilled,
 } from "@/lib/validates/validate";
+
+const PROGRESS_SAVE_DEBOUNCE_MS = 300;
 
 function PuzzleDifficultyLine({ level }: { level: number }) {
   return (
@@ -44,13 +53,17 @@ function PresentTechniqueFootnote({ techniqueId }: { techniqueId: TechniqueId })
   );
 }
 
-export type SudokuPlayPuzzle = {
-  id: string;
-  puzzle_81: string;
-  solution_81: string;
-  description: string | null;
-  level: number;
-};
+export type SudokuPlayPuzzle = Puzzle;
+
+function historyFromSavedProgress(saved: PlayProgressEntry): PlayHistory | null {
+  if (saved.values81.length !== SUDOKU_CELLS) return null;
+  if (saved.memoMasks81.length !== SUDOKU_CELLS) return null;
+  const values = [...saved.values81].map((ch) => Number(ch));
+  if (values.some((v) => !Number.isInteger(v) || v < 0 || v > 9)) return null;
+
+  const grid = SudokuGrid.fromValuesAndCandidateMasks(values, saved.memoMasks81);
+  return PlayHistory.create(grid);
+}
 
 /**
  * 数字行・テンキーの 1〜9。Shift で `e.key` が記号でも `code` の `Digit*` / `Numpad*` で拾う。
@@ -82,13 +95,20 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
     [puzzle.puzzle_81],
   );
 
-  const [history, setHistory] = useState(() =>
-    PlayHistory.create(SudokuGrid.fromValues(seedValues)),
+  const savedProgress = useMemo(
+    () => loadPlayProgress(puzzle.puzzle_81),
+    [puzzle.puzzle_81],
+  );
+
+  const [history, setHistory] = useState(
+    () =>
+      (savedProgress && historyFromSavedProgress(savedProgress)) ??
+      PlayHistory.create(SudokuGrid.fromValues(seedValues)),
   );
   const historyRef = useRef(history);
   const board = history.present;
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [mistakes, setMistakes] = useState(0);
+  const [mistakes, setMistakes] = useState(savedProgress?.mistakes ?? 0);
   const [phase, setPhase] = useState<"playing" | "result" | "review">(
     "playing",
   );
@@ -116,6 +136,27 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
   }, [board]);
 
   const gridValues = useMemo(() => [...board.values()], [board]);
+  const memoMasks81 = useMemo(
+    () => Array.from({ length: 81 }, (_, i) => board.cellAt(i).memoMask),
+    [board],
+  );
+
+  useEffect(() => {
+    if (phase !== "playing") return;
+    const timer = window.setTimeout(() => {
+      savePlayProgress(puzzle.puzzle_81, {
+        values81: gridValues.join(""),
+        memoMasks81,
+        mistakes,
+      });
+    }, PROGRESS_SAVE_DEBOUNCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [gridValues, memoMasks81, mistakes, phase, puzzle.puzzle_81]);
+
+  useEffect(() => {
+    if (phase !== "result") return;
+    deletePlayProgress(puzzle.puzzle_81);
+  }, [phase, puzzle.puzzle_81]);
 
   /** 選択マスに確定数字があるとき、盤上のメモで同じ数字を強調する */
   const memoHighlightDigit = useMemo(() => {
@@ -399,9 +440,6 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
           <div>
             <h1 className="text-xl font-semibold text-zinc-900">ナンプレ</h1>
             <PuzzleDifficultyLine level={puzzle.level} />
-            {puzzle.description ? (
-              <p className="mt-1 text-sm text-zinc-600">{puzzle.description}</p>
-            ) : null}
           </div>
           <div className="flex flex-col items-end gap-2 text-right text-sm">
             <button
@@ -467,9 +505,6 @@ export function SudokuPlayClient({ puzzle }: { puzzle: SudokuPlayPuzzle }) {
         <div>
           <h1 className="text-xl font-semibold text-zinc-900">ナンプレ</h1>
           <PuzzleDifficultyLine level={puzzle.level} />
-          {puzzle.description ? (
-            <p className="mt-1 text-sm text-zinc-600">{puzzle.description}</p>
-          ) : null}
         </div>
         <div className="text-right text-sm text-zinc-600">
           <p>

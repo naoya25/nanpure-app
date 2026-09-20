@@ -1,42 +1,52 @@
 # アーキテクチャ
 
-nanpure-app の構成・レイヤー・データの流れ・ディレクトリ方針を定義する。コーディング規約やエージェント向けルールは `AGENTS.md`、DB の DDL は `supabase/migrations/` 配下を参照する。
+nanpure-app の構成・レイヤー・データの流れ・ディレクトリ方針を定義する。コーディング規約やエージェント向けルールは `AGENTS.md`、問題データの型は `lib/types/puzzle.ts` を参照する。
 
 ## 機能スコープ（最小 MVP）
 
-1. **取得**: `public.puzzles` から問題を **1 件**選び、画面に載せる。
+1. **取得**: URL の `?p=` に問題があればそれを使う。無ければローカル在庫から **1 件**、在庫も無ければその場で生成し、画面に載せる（詳細は次節）。
 2. **表示**: `puzzle_81` を 9×9 盤面として表示する（`0` は空マス）。
 3. **操作**: 空マスに 1〜9 を入力・削除できる。`puzzle_81` で既に数字が与えられているマスは **固定**（編集不可）とする。
 4. **正誤**: ユーザーがマスに値を入れた **タイミング**で、そのマスの値を `solution_81` の同じインデックスと比較する。不一致なら **そのマスに紐づく警告**を出す（表示方法は UI 側で決める）。
 
-盤面の現在状態はクライアントの state で持ち、`solution_81` は取得後メモリ上で参照する（MVP）。不正対策を厳密にする必要が出た段階でサーバー検証などを検討する。
+盤面の現在状態はクライアントの state で持ち、`solution_81` は取得後メモリ上で参照する（MVP）。アプリはサーバーを持たない完全な静的サイト（`output: "export"`）のため、不正対策を厳密にする必要が出た場合はクライアント側の強化かバックエンド再導入を検討する。
 
-**ルーティング（プレイ）**: 問題の取得・表示の正規 URL は **`/play/[id]`**（`puzzles.id` の uuid）。共有・ブックマーク・再訪で同じ問題を指す。**`/play`** はランダムに 1 件選んで `/play/[id]` へリダイレクトする入口のみとする。
+**ルーティング（プレイ）**: プレイ画面は **`/play/`** の 1 本のみ（Client Component）。共有・ブックマーク・再訪で同じ問題を指すのは URL クエリ **`?p=<puzzle_81>`**（81 文字）で、問題が決まった時点で `history.replaceState` により付け直す（詳細は次節）。動的ルート `/play/[id]` は採用しない — id は端末内の localStorage にしか存在せず、静的エクスポートの `generateStaticParams()` では列挙できないため。
 
-## データ取得（ランダム 1 問・RPC なし）
+## 問題の用意（生成と在庫）
 
-Supabase への問い合わせは **`lib/repositories/`** に閉じ、次の **2 ステップ**とする。
+Supabase はもう無い。問題はすべてブラウザ側で完結して用意する。
 
-1. `puzzles` から **`id` のみ**取得する（必要に応じてページングや上限を後から足す）。
-2. アプリ側で `id` の一覧から **1 つランダムに選び**、選んだ `id` で **通常の `select`** して 1 行（`puzzle_81` / `solution_81` など必要列）を取得する。
+1. `/play/` を開く。
+2. URL に `?p=<81文字>` があれば、その盤面を使う。`sudokuSolutionCountKind`（`lib/algorithms/sudoku_solver.ts`）で解を復元し、一意解でなければ不正な共有 URL として扱う。
+3. 無ければ `lib/storage/puzzle_stock.ts` の在庫から 1 件取り出す（`takeOne()`）。
+4. 在庫も空なら Worker で生成する（`lib/workers/generate_puzzle_client.ts` の `requestGeneratedPuzzle()`）。Worker の生成に失敗した場合はメインスレッドで同期実行にフォールバックする。
+5. 問題が決まったら `history.replaceState` で `?p=<puzzle_81>` を URL に付ける。これが共有 URL になる。
+6. 在庫が目標数（3 件）未満なら、上記と同じ Worker 生成で裏から補充する。
 
-DB に `get_random_puzzle` のような RPC は置かない。テーブルが大きくなったら、取得戦略（id のサンプリング方法など）だけリポジトリ側で差し替えやすくする。
+この一連の流れは **`lib/services/prepare_puzzle_for_play.ts`**（`preparePuzzleForPlay()`）1 本にまとめる。戻り値は outcome（`ok` / `invalid_shared_puzzle` / `generation_failed`）で、UI（`app/play/page.tsx`）はそれを見て分岐するだけ。
 
-ランダム取得は **`lib/repositories/` の関数**にまとめる（id 一覧取得 → 抽選 → `select` 1 行）。**特定 ID の 1 行**も同じ層の関数で取得する。
+**生成本体**は `lib/workers/generate_puzzle_core.ts` の `generatePuzzleSync()`。Worker（`generate_puzzle.worker.ts`）とメインスレッドのフォールバックの両方がこの同じ純粋関数を呼ぶ。**`generate_puzzle.worker.ts` 自身から `new Worker` を呼ばないこと** — 自己参照でモジュールグラフが循環し、Turbopack のビルドが停止する。`package.json` の `dev` / `build` が `--webpack` を明示しているのも同じ理由（Turbopack は `new Worker(new URL('./x.worker.ts', import.meta.url))` の worker を `.ts` ソースのまま `_next/static/media/` にコピーする既知のバグがあり、ブラウザでの Worker 生成が失敗してフォールバックに落ちる。vercel/next.js Issue #98841 / Discussion #59729）。
 
-## リポジトリとサービス（ユースケース）の分担
+**実測**（M2 Mac / Node v22）:
 
-**Repository（`lib/repositories/`）** の責務は **データベース（Supabase）とのデータのやり取り**に限定する。クエリの組み立てと取得した行の返却。**PostgREST / 通信エラーは Result にまとめず、そのまま `throw`** する（型・内容を UX 向けに丸めない）。**行が無い**などクエリ結果として空のときは `null` などで返す。**リトライ文言・画面状態**といった **UX の判断は書かない**。
+- 生成 + レベル算出（`generatePuzzleSync()`）: 中央値 約 300ms / 最大 2283ms（N=20）
+- 共有 URL からの解の復元（`sudokuSolutionCountKind()`）: 中央値 7.7ms / 最大 51.2ms（N=15）。Worker を使わずメインスレッドで同期実行している。
+- 生成されるレベルの分布: min 50 / 中央値 54 / 最大 142（N=60）。`SOLVED_DIFFICULTY_SCORE_MIN = 50` により解けた問題のレベルは 50 を下回らないため、**「やさしい問題」を選ばせる難易度選択機能は現在の生成器では作れない**。
 
-その一つ外側に **ユースケース層**（オーケストレーション）を置く。ここは **機能・画面単位**で、repository を **try-catch** し、例外を **UI が分岐しやすい outcome**（成功 / データなし / 再試行を促す 等）に変換する。**Success / Failure のまとめ方はここだけ**。
+## ストレージ・ワーカーとサービス（ユースケース）の分担
+
+**`lib/storage/`** の責務は **localStorage とのやり取り**に限定する。`local_storage.ts` がアクセス自体の失敗（環境によっては `window.localStorage` へのアクセスが `throw` する）を握りつぶし、呼び出し側には `null` / 書き込み成否の `boolean` を返す。**throw しない**。上位の `puzzle_stock.ts` / `play_progress.ts` もこれに合わせ、壊れた保存データは検証して空扱いにする。
+
+**`lib/workers/`** の責務は **問題生成**に限定する。`generate_puzzle_client.ts` の `requestGeneratedPuzzle()` は Worker 生成・実行を試み、Worker を作れない・失敗した場合はメインスレッドで同じ処理に **フォールバック** する。両方失敗した場合のみ Promise を reject する。
+
+その外側に **ユースケース層**（オーケストレーション）を置く。現状は `lib/services/prepare_puzzle_for_play.ts` の 1 モジュールのみ。`lib/storage/` の戻り値と `lib/workers/` の reject を見て、**UI が分岐しやすい outcome**（`ok` / `invalid_shared_puzzle` / `generation_failed`）に変換する。**Success / Failure のまとめ方はここだけ**。
 
 **置き場所は `lib/services/` に統一する。** `app/<route>/controller.ts` のようにルート隣接でユースケースを置く案は、同一責務が複数パスに散らばり **混乱や重複の温床**になりやすいため採用しない。画面専用のユースケースも **`lib/services/` に 1 モジュール**とし、`app/.../page.tsx` はそれを呼ぶだけにする。
 
-- **try-catch**: 主にユースケース層で、repository から **throw されたエラー**を捕捉し、UI 向け outcome に変換する。
+- **try-catch**: 主にユースケース層で、`lib/workers/` から **reject されたエラー**を捕捉し、UI 向け outcome に変換する。
 
-Next.js の Route Handler / Server Action は HTTP やフォームの入口として使う場合のみ。画面のデータ組み立ての本体は **`lib/services/` の関数**に寄せる。
-
-**UI（`app/` / `components/`）** はユースケースの戻り値に応じて描画する。データ取得・UX 向け分岐は **`lib/services/` 経由**に統一する。
+**UI（`app/` / `components/`）** はユースケースの戻り値に応じて描画する。データの用意・UX 向け分岐は **`lib/services/` 経由**に統一する。
 
 ## レイヤーと依存の向き
 
@@ -44,13 +54,13 @@ Next.js の Route Handler / Server Action は HTTP やフォームの入口と�
 
 | レイヤー | 役割 |
 |----------|------|
-| **Infrastructure** | `lib/supabase/` — クライアント生成（ブラウザ用 / サーバー用など）。URL・anon キーは環境変数。 |
-| **データアクセス** | `lib/repositories/` — Supabase との入出力のみ。エラーは `throw`、空結果は `null` 等。UX に関する判断は書かない。 |
-| **型** | `lib/types/` — DB 行・アプリ用の **型定義**。振る舞いのないデータ形だけ。 |
-| **ドメインモデル** | `lib/models/` — 画面や操作で扱いやすい **オブジェクトの集約**。DB 文字列や素の配列とは別表現でよい。**論理解法テクニックを 1 手ずつ適用する窓口**（`SudokuGrid` を受け、難易度順のオーケストレーションやヒント用の最初の手の返却など）もここに置く。中身の各テクニック判定は `lib/algorithms/techniques/` の純粋関数を呼ぶ。 |
+| **ローカル永続化** | `lib/storage/` — localStorage の読み書き（在庫・解きかけ進行）。アクセス自体が失敗しうるため `throw` せず `null` / `boolean` で返す。 |
+| **生成** | `lib/workers/` — Web Worker で問題を生成し、失敗時はメインスレッドの同期処理にフォールバックする。 |
+| **型** | `lib/types/` — アプリ用の **型定義**（`Puzzle` など）。振る舞いのないデータ形だけ。 |
+| **ドメインモデル** | `lib/models/` — 画面や操作で扱いやすい **オブジェクトの集約**。素の文字列や配列とは別表現でよい。**論理解法テクニックを 1 手ずつ適用する窓口**（`SudokuGrid` を受け、難易度順のオーケストレーションやヒント用の最初の手の返却など）もここに置く。中身の各テクニック判定は `lib/algorithms/techniques/` の純粋関数を呼ぶ。 |
 | **ドメイン（純粋ロジック）** | `lib/validates/` — React ・ `fetch` を持たない TS。81 文字 ↔ セル、固定マス判定、マス単位の正誤など。 |
 | **アルゴリズム** | `lib/algorithms/` — **81 文字列の盤**の求解・列挙・検証に加え、**各解法テクニックの 1 手分ロジック**（`techniques/` 以下）を置く。テクニック関数は DTO（確定値配列＋候補ビット）中心で **`SudokuGrid` 本体は import しない**（窓口は `lib/models/`）。UI からテクニックを直接呼ばない。 |
-| **ユースケース** | `lib/services/` のみ — repository を呼び、throw を含めて **outcome（成功 / 失敗 / 空）** に変換。try-catch は主にここ。 |
+| **ユースケース** | `lib/services/` のみ — `lib/storage/` と `lib/workers/` を呼び、**outcome（`ok` / `invalid_shared_puzzle` / `generation_failed`）** に変換。try-catch は主にここ。 |
 | **Presentation** | `app/` のルート、`components/`。操作は `lib/validates/` の純粋関数を呼び、データ取得は **`lib/services/` 経由**に統一。正誤ロジックをコンポーネントに直書きしない。 |
 
 ## ディレクトリ構成（役割のみ）
@@ -63,50 +73,49 @@ Next.js の `app/` は **ルーティングとページの入口**。データ�
 
 | パス | 役割 |
 |------|------|
-| `app/` | App Router。URL に対応する `page` / `layout` など。サーバー側では `lib/services` を呼び出す。 |
-| `scripts/` | **CLI・バッチ**（問題の生成と DB 投入など）。アプリのビルド対象外だが、`lib/` の repository や **`lib/algorithms/`**（求解など）を import してよい。`create-puzzle` は生成後に runner で `level` を算出し、問題 insert に続けて解答分析を RPC で記録する。 |
-| `lib/supabase/` | Supabase クライアントの生成（ブラウザ用・サーバー用など、用途で分ける）。 |
-| `lib/repositories/` | **データベースとの入出力だけ**。クエリと行の返却。UX や outcome の解釈は書かない。 |
-| `lib/services/` | **ユースケース**。repository を組み合わせ、例外を捕捉して UI が扱いやすい結果に変換する。 |
-| `lib/types/` | **型定義のみ**（DB 行の形、アプリ内で共有する軽い型）。 |
-| `lib/models/` | **振る舞い付きのドメイン集約**（プレイ盤面・プレイ履歴・**論理 1 手テクニックの実行**など）。`puzzle_81` / `solution_81` 文字列に対する runner 一括実行の要約など、CLI と共有する表現もここに寄せる。DB の生データとは別表現でよい。 |
+| `app/` | App Router。URL に対応する `page` / `layout` など。データの用意は `lib/services` を呼び出す（`output: "export"` の静的サイトのため実行時サーバーは無い）。 |
+| `scripts/` | **CLI・実験用スクリプト**。DB は無い。アプリのビルド対象外だが、`lib/algorithms/` や `lib/validates/` を import してよい（盤面の整形、生成統計の収集など）。 |
+| `lib/storage/` | **localStorage の読み書きだけ**。在庫（`puzzle_stock`）・解きかけ進行（`play_progress`）。アクセス自体の失敗を握りつぶし `null` / `boolean` で返す。UX や outcome の解釈は書かない。 |
+| `lib/workers/` | **問題生成**。Web Worker 本体とメインスレッド用の窓口、両者が共有する同期生成処理を置く。 |
+| `lib/services/` | **ユースケース**。`lib/storage/` と `lib/workers/` を組み合わせ、例外や失敗を捕捉して UI が扱いやすい結果に変換する。 |
+| `lib/types/` | **型定義のみ**（`Puzzle` の形、アプリ内で共有する軽い型）。 |
+| `lib/models/` | **振る舞い付きのドメイン集約**（プレイ盤面・プレイ履歴・**論理 1 手テクニックの実行**など）。`puzzle_81` / `solution_81` 文字列に対する runner 一括実行の要約など、CLI と共有する表現もここに寄せる。 |
 | `lib/utils/` | **横断的な小さな純粋関数**（表示用の細切れ、入力検証のヘルパなど）。ドメインの本丸は `validates` に置く。 |
-| `lib/algorithms/` | **求解・列挙・一意解判定**（文字列盤）と、**テクニックごとの 1 手検出・適用指示**（`techniques/`、DTO 入力。交差・サブセット・**基本魚（fishNN）**・**スカイスクレーパー** など）。**難易度スコア**（解けた問題はテクニック別固定点の最大を基準に手数・多様性などを微加点して 50〜100、**未解決は 100 + 残り空マスで 100〜181**）もここに置く。CLI / サーバー / `lib/models` の窓口から再利用する。 |
+| `lib/algorithms/` | **求解・列挙・一意解判定**（文字列盤）と、**テクニックごとの 1 手検出・適用指示**（`techniques/`、DTO 入力。交差・サブセット・**基本魚（fishNN）**・**スカイスクレーパー** など）。**難易度スコア**（解けた問題はテクニック別固定点の最大を基準に手数・多様性などを微加点して 50〜100、**未解決は 100 + 残り空マスで 100〜181**）もここに置く。CLI / `lib/workers/` / `lib/models` の窓口から再利用する。 |
 | `lib/validates/` | **ナンプレのルール・盤面のパース・正誤判定**など、React / `fetch` に依存しない純粋ロジック。 |
 | `components/` | **UI 部品**。機能・画面単位でサブディレクトリを切ってよい。共通デザインだけをまとめるなら `components/ui/` などを別立てしてよい。 |
 
-`lib/` のトップに置くディレクトリは、上表のとおり **`supabase` / `repositories` / `services` / `types` / `models` / `utils` / `algorithms` / `validates`** を基本とする。必要になったら **同じ粒度の責務なら追加**、迷ったらいったん `services` か `validates` に寄せてから分割してよい。
+`lib/` のトップに置くディレクトリは、上表のとおり **`storage` / `workers` / `services` / `types` / `models` / `utils` / `algorithms` / `validates`** を基本とする。必要になったら **同じ粒度の責務なら追加**、迷ったらいったん `services` か `validates` に寄せてから分割してよい。
 
 ## データモデル（参照）
 
-- `puzzles.id`: `uuid`
+DB は無い。問題の形は `lib/types/puzzle.ts` の `Puzzle` 型のみ。
+
 - `puzzle_81`: 81 文字、`0`〜`9`（`0` = 空）
 - `solution_81`: 81 文字、`1`〜`9`
-- `level`: `int`、1..200（CHECK。解けた問題はおおむそ 50–100、**未解決は 100 + 空マス**で 100 を超えうる。帯の目安は従来どおり 1–100 付近を解けた向けに解釈）
+- `level`: `number`。型上の範囲は `PUZZLE_LEVEL_MIN`〜`PUZZLE_LEVEL_MAX`（1〜200）だが、現在の生成器が実際に出す値はもっと狭い。**実測**（N=60）: min 50 / 中央値 54 / 最大 142。`SOLVED_DIFFICULTY_SCORE_MIN = 50` により解けた問題のレベルは 50 を下回らない。
 
-**論理解法の記録（難易度判定など）**
+**テクニック使用状況の分析**（`lib/models/puzzle_technique_run_analysis.ts` の `summarizeTechniqueAutoRunFromStrings()`）は `level` を算出するためだけの **その場限りの計算**で、結果を永続化しない。DB もそれに紐づく RPC も無い。
 
-- `solving_techniques`: テクニック ID のマスタ（`TechniqueId` と同一文字列、`sort_order` は適用順）。行の追加はマイグレーションで行う。
-- `puzzle_solve_analyses`: `puzzles` に対するテクニックランナー実行 1 回分（解けたか・残り空マス数・終了理由・不整合検知など）。
-- `puzzle_solve_technique_usage`: 各分析に紐づく「テクニック ID ごとの適用ステップ数」（未使用のテクニックは行を持たない）。
-- 分析と使用回数の挿入は RPC `insert_puzzle_solve_analysis_with_usage` で 1 トランザクションにまとめる（RLS 下での二段 insert の中途失敗を避ける）。
+**localStorage のスキーマ**（いずれも `lib/storage/`、壊れたデータは検証して空扱いにする）:
 
-RLS・ポリシーは各マイグレーションのとおり。スキーマ変更は **必ず** `supabase/migrations/` に SQL として残す。
+- `nanpure:stock:v1`（`puzzle_stock.ts`）: 生成済み・未使用の `Puzzle` 配列。目標在庫数は 3 件。
+- `nanpure:progress:v1`（`play_progress.ts`）: 解きかけの盤面。`puzzle_81` をキーに最大 20 件、古い順に切り捨てる。**undo/redo 履歴は保存しない。**
 
 ## 開発の進め方
 
-- **縦スライス優先**: ランダム取得 → 表示 → 入力 → マス単位警告まで一気通しで動かしてから仕上げる。
+- **縦スライス優先**: 問題の用意 → 表示 → 入力 → マス単位警告まで一気通しで動かしてから仕上げる。
 - **変更後**: `npm run lint` と `npm run build` を通す（`AGENTS.md`）。
 - **テスト**: `lib/validates/` の純粋関数からユニットテストを書きやすい形にする。
 
 ## 将来の拡張（方針のみ）
 
-- **解答作成・投稿**: 別ルート・別コンポーネント群を足し、保存の DB 呼び出しは `lib/repositories/`、フロー組み立て・UX 向け結果は `lib/services/`、検証・盤面変換は `lib/validates/`（と必要なら `lib/types/`）に寄せる。
-- **アルゴリズム**（生成・難易度・ヒントなど）: **文字列盤の求解・列挙**は `lib/algorithms/`、プレイや DB 形式に近い **パース・正誤**は `lib/validates/`。UI からは純粋関数 API だけを使う。
-- **自動問題生成**: 対角ブロック（0,4,8）のみを埋めたシードから完成盤を 1 通り求め、一意解を保つようマスを削る（実装は **`lib/algorithms/`**。CLI から利用）。CLI での保存は `scripts/create-puzzle.ts`（`npm run create-puzzle`）：**runner 実行 → 難易度スコアで `level` → `puzzles` insert → 解答分析 RPC**。サーバーからの組み立てが必要な場合は `lib/services/` が同じ生成モジュールを import してよい。
+- **解答作成・投稿**: 別ルート・別コンポーネント群を足す。現状はバックエンドを持たないため保存先は別途検討するが、フロー組み立て・UX 向け結果は `lib/services/`、検証・盤面変換は `lib/validates/`（と必要なら `lib/types/`）に寄せる方針は維持する。
+- **ヒント**: 論理 1 手テクニックの実行窓口はすでに `lib/models/`（`lib/algorithms/techniques/` を呼ぶ）にある。UI からテクニックを直接呼ばず、純粋関数 API 経由にする方針は変わらない。
 
 ## 更新履歴
 
+- 2026-09-20: Supabase を全廃止。問題の生成・保存はブラウザ内で完結する（`lib/workers/` で生成、`lib/storage/` で localStorage への在庫・進行保存）。プレイの正規 URL を `/play/[id]` から `/play/` + `?p=<puzzle_81>` に変更（`generateStaticParams()` で id を列挙できないため）。`lib/supabase/` `lib/repositories/` `supabase/migrations/` と DB 投入系 CLI（`create-puzzle` 等）を削除し、`lib/types/puzzle.ts` の `PuzzleRow` を `Puzzle`（`puzzle_81` / `solution_81` / `level` のみ）に置き換え。`next.config.ts` を `output: "export"` の静的サイトにし、GitHub Pages へデプロイする（`.github/workflows/deploy.yml`）。
 - 2026-04-06: 自動適用テクニック脚注の ID をクリックで `docs/sudoku-techniques.md` に対応した Google 検索を別タブで開く（`lib/utils/technique_web_search.ts`）。
 - 2026-04-06: プレイ画面（`SudokuPlayClient`）に `puzzles.level`（数値）を表示。
 - 2026-04-06: `create-puzzle` CLI は生成後に runner・`level` 算出・`puzzle_solve_analyses` 記録まで行う。`clampScoreToPuzzleLevel`（`lib/utils/`）と分析 RPC 用の `puzzleSolveAnalysisInsertBodyFromSummary`（`lib/models/`）を共有化。

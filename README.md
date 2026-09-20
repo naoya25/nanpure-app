@@ -1,33 +1,21 @@
 # nanpure-app
 
-ナンプレ（数独）の問題をデータベースから取得してプレイするための Web アプリ。Next.js で構築しています。
+ナンプレ（数独）の解法テクニックを学び、盤上で試すための Web アプリ。問題はブラウザ内で生成・保存し、サーバーは持ちません。Next.js の静的サイトとして GitHub Pages で配信しています。
 
-## 開発
+## ローカルでの動かし方
 
 ```bash
 npm install
 npm run dev
 ```
 
-## 環境変数
+`dev` / `build` は `--webpack` を明示しています（問題生成の Worker が Turbopack の既知バグに当たるため。詳細は `docs/architecture.md`）。
 
-`.env.local` に Supabase のクライアント用キーを設定します（リポジトリにコミットしないこと）。
+`npm run build` で `out/` に静的ファイルを生成します（`next.config.ts` の `output: "export"`）。`output: "export"` は `next start` に対応しないため、本番相当の確認をしたい場合は `out/` を任意の静的ファイルサーバーで配信してください。
 
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+## GitHub Pages へのデプロイ
 
-## データベース
-
-スキーマは `supabase/migrations/puzzles.sql` を参照。Supabase プロジェクトにマイグレーションを適用してください。
-
-## 問題を生成して DB に追加（CLI）
-
-`.env.local` を用意したうえで:
-
-```bash
-npm run create-puzzle
-npm run create-puzzle -- --count=5
-```
+`main` への push または手動実行で `.github/workflows/deploy.yml` が動き、`npm run build` が生成する `out/` を GitHub Pages に公開します。
 
 ## TODO
 
@@ -46,7 +34,7 @@ npm run create-puzzle -- --count=5
   - 問題ごとに使用しなければならないテクニックのレベルから難易度を決める
 - テクニック詳細ページを作成
   - 振り返りモードでテクニック詳細ページへ紐付け(別タブ遷移)
-- DBでpuzzle_81をユニークにする
+- puzzle_81 の重複を避ける
 - ヒント機能
 
 ## バグリスト

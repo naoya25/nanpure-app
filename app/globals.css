@@ -26,11 +26,11 @@ body {
 /*
   プレイ盤・テンキー用の点カーソル。
   macOS / Chrome 等の UA は button に cursor を直指定するため、親の継承だけでは効かない。
-  `public/cursors/play-dot.png`（32×32、ホットスポット 16,16）
+  32×32、ホットスポット 16,16。`basePath` の影響を受けないよう data URI で埋め込む。
 */
 @media (pointer: fine) {
   .play-surface-cursor,
   .play-surface-cursor button {
-    cursor: url("/cursors/play-dot.png") 16 16, auto;
+    cursor: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgBAMAAACBVGfHAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAAPUExURQAAACVj6yVj6yVj6////9Y+prAAAAADdFJOUwAos/VDiEIAAAABYktHRASPaNlRAAAAB3RJTUUH6gMeABEYzNhzfgAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyNi0wMy0zMFQwMDoxNzoyNCswMDowMBuZBogAAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjYtMDMtMzBUMDA6MTc6MjQrMDA6MDBqxL40AAAAKHRFWHRkYXRlOnRpbWVzdGFtcAAyMDI2LTAzLTMwVDAwOjE3OjI0KzAwOjAwPdGf6wAAACpJREFUKM9jYBgBQMhIAIXPaGxsiCLAZGxshCLAbGxsjF8FhhkYtgwLAADEAQOpT1yMlQAAAABJRU5ErkJggg==") 16 16, auto;
   }
 }
