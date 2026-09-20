@@ -68,12 +68,12 @@ export function ControlPad({
               onClick={() => onApplyDigit(n)}
               onFocus={onFocusAnyControl}
               className={[
-                "flex min-h-11 min-w-0 flex-1 basis-0 touch-manipulation items-center justify-center rounded-md text-lg font-semibold sm:min-h-12 sm:text-xl",
+                "flex min-h-11 min-w-0 flex-1 basis-0 touch-manipulation items-center justify-center rounded-md border border-zinc-200 bg-white text-lg font-bold text-[var(--digit-given)] sm:min-h-12 sm:text-xl",
                 inputLocked
-                  ? "pointer-events-none text-zinc-400 opacity-40"
+                  ? "pointer-events-none opacity-40"
                   : done
                     ? "pointer-events-none invisible"
-                    : "text-zinc-900 active:bg-zinc-100 sm:hover:bg-zinc-50",
+                    : "active:bg-zinc-100 sm:hover:bg-zinc-50",
               ].join(" ")}
             >
               {n}
@@ -90,10 +90,10 @@ export function ControlPad({
             onClick={() => onToggleMemo(n)}
             onFocus={onFocusAnyControl}
             className={[
-              "flex min-h-11 min-w-0 flex-1 basis-0 touch-manipulation items-center justify-center rounded-md text-lg font-semibold sm:min-h-12 sm:text-xl",
+              "flex min-h-11 min-w-0 flex-1 basis-0 touch-manipulation items-center justify-center rounded-md border border-dashed border-zinc-300 bg-zinc-50 text-lg font-normal text-[var(--memo)] sm:min-h-12 sm:text-xl",
               inputLocked
-                ? "pointer-events-none text-zinc-400 opacity-40"
-                : "text-zinc-500 active:bg-zinc-100 sm:hover:bg-zinc-50",
+                ? "pointer-events-none opacity-40"
+                : "active:bg-zinc-100 sm:hover:bg-zinc-100",
             ].join(" ")}
           >
             {n}

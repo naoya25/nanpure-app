@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
 import { ControlPad } from "@/components/nanpure/ControlPad";
-import { SudokuBoard } from "@/components/nanpure/SudokuBoard";
+import { CELL_SIZE_EXPR, SudokuBoard } from "@/components/nanpure/SudokuBoard";
 import { PlayHistory } from "@/lib/models/play_history";
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import {
@@ -30,6 +30,7 @@ import {
 } from "@/lib/validates/validate";
 
 const PROGRESS_SAVE_DEBOUNCE_MS = 300;
+const BOARD_GROUP_WIDTH_EXPR = `calc(${CELL_SIZE_EXPR} * 9)`;
 
 function PuzzleDifficultyLine({ level }: { level: number }) {
   return (
@@ -441,8 +442,8 @@ export function SudokuPlayClient({
 
   if (phase === "review") {
     return (
-      <main className="mx-auto max-w-lg px-4 py-8">
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
+      <main className="mx-auto max-w-2xl px-4 py-8">
+        <div className="mb-4 max-w-md rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
           <p className="font-medium">振り返り</p>
           <p className="mt-1 text-amber-900/90">
             初期盤面から「一手進める」で操作を順に再表示できます。「一手戻る」で戻せます。数字入力は使えませんが、盤面のマス選択ハイライトは確認できます。
@@ -468,7 +469,7 @@ export function SudokuPlayClient({
           </div>
         </div>
 
-        <div>
+        <div className="mx-auto" style={{ width: BOARD_GROUP_WIDTH_EXPR }}>
           <SudokuBoard
             gridValues={gridValues}
             fixed={fixed}
@@ -512,7 +513,7 @@ export function SudokuPlayClient({
   }
 
   return (
-    <main className="mx-auto max-w-lg px-4 py-8">
+    <main className="mx-auto max-w-2xl px-4 py-8">
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-zinc-900">ナンプレ</h1>
@@ -541,7 +542,10 @@ export function SudokuPlayClient({
         </div>
       </div>
 
-      <div className="play-surface-cursor">
+      <div
+        className="play-surface-cursor mx-auto"
+        style={{ width: BOARD_GROUP_WIDTH_EXPR }}
+      >
         <SudokuBoard
           gridValues={gridValues}
           fixed={fixed}

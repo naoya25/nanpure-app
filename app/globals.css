@@ -4,6 +4,23 @@
   color-scheme: light;
   --background: #fafafa;
   --foreground: #18181b;
+
+  --digit-given: #18181b;
+  --digit-user: #1746c4;
+  --digit-error: #a41c1c;
+  --memo: #4b4b52;
+  --memo-strong: #18181b;
+
+  --cell-bg: #ffffff;
+  --cell-bg-peer: #e6f1fb;
+  --cell-bg-same: #b9d9f4;
+  --cell-bg-selected: #cfe4f8;
+  --cell-bg-technique: #fde3a0;
+  --cell-bg-error: #fbd5d5;
+
+  --ring-selected: #1d4ed8;
+  --rule-thin: #d4d4d8;
+  --rule-thick: #3f3f46;
 }
 
 html {

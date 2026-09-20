@@ -1,5 +1,10 @@
+import type { CSSProperties } from "react";
+
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import { isCellMismatchingSolution } from "@/lib/validates/validate";
+
+export const CELL_SIZE_EXPR =
+  "max(30px, calc(min(100vw - 2rem, 34rem, 100vh - 22rem) / 9))";
 
 function cellBorderClasses(index: number): string {
   const row = Math.floor(index / 9);
@@ -8,15 +13,15 @@ function cellBorderClasses(index: number): string {
   if (col < 8) {
     parts.push(
       col % 3 === 2
-        ? "border-r-2 border-r-zinc-600"
-        : "border-r border-r-zinc-300",
+        ? "border-r-2 border-r-[var(--rule-thick)]"
+        : "border-r border-r-[var(--rule-thin)]",
     );
   }
   if (row < 8) {
     parts.push(
       row % 3 === 2
-        ? "border-b-2 border-b-zinc-600"
-        : "border-b border-b-zinc-300",
+        ? "border-b-2 border-b-[var(--rule-thick)]"
+        : "border-b border-b-[var(--rule-thin)]",
     );
   }
   return parts.join(" ");
@@ -61,6 +66,10 @@ function memoMaskHas(mask: number, digit: number): boolean {
   return (mask & (1 << (digit - 1))) !== 0;
 }
 
+const memoFontSize: CSSProperties = {
+  fontSize: "calc(var(--cell) * 0.27)",
+};
+
 function CellMemoMarks({
   mask,
   highlightDigit,
@@ -70,7 +79,10 @@ function CellMemoMarks({
 }) {
   return (
     <span className="pointer-events-none flex h-full min-h-0 w-full items-center justify-center px-0.5 py-0.5">
-      <span className="grid aspect-square h-full w-full max-h-full max-w-full grid-cols-3 grid-rows-3 place-items-center text-[0.58rem] leading-none sm:text-[0.68rem]">
+      <span
+        className="grid aspect-square h-full w-full max-h-full max-w-full grid-cols-3 grid-rows-3 place-items-center leading-none"
+        style={memoFontSize}
+      >
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => {
           const visible = memoMaskHas(mask, d);
           const digitHighlight =
@@ -81,8 +93,8 @@ function CellMemoMarks({
               className={
                 visible
                   ? digitHighlight
-                    ? "font-extrabold tabular-nums text-zinc-900"
-                    : "font-medium tabular-nums text-zinc-400"
+                    ? "font-bold tabular-nums text-[var(--memo-strong)]"
+                    : "font-normal tabular-nums text-[var(--memo)]"
                   : "invisible tabular-nums"
               }
             >
@@ -95,42 +107,23 @@ function CellMemoMarks({
   );
 }
 
-function cellSurfaceClasses(
-  readOnly: boolean,
+function cellBackgroundClass(
   h: CellHighlight,
   incorrect: boolean,
   techniqueHighlighted: boolean,
 ): string {
-  if (h.selected) {
-    return incorrect
-      ? "relative z-10 bg-red-200 ring-2 ring-inset ring-blue-600"
-      : techniqueHighlighted
-        ? "relative z-10 bg-amber-200 ring-2 ring-inset ring-blue-600"
-        : "relative z-10 bg-sky-200 ring-2 ring-inset ring-blue-600";
-  }
-  if (incorrect) {
-    return readOnly
-      ? "bg-red-100 text-red-900"
-      : "bg-red-100 text-red-900 hover:bg-red-200";
-  }
-  if (techniqueHighlighted) {
-    return readOnly
-      ? "bg-amber-100 text-zinc-900"
-      : "bg-amber-100 text-zinc-900 hover:bg-amber-200";
-  }
-  if (h.digitMatch) {
-    return readOnly
-      ? "bg-sky-200 text-zinc-900"
-      : "bg-sky-100 text-zinc-900 hover:bg-sky-200";
-  }
-  if (h.inBand) {
-    return readOnly
-      ? "bg-sky-100 text-zinc-900"
-      : "bg-sky-50 text-zinc-900 hover:bg-sky-100";
-  }
-  return readOnly
-    ? "bg-zinc-100 text-zinc-900"
-    : "bg-white text-zinc-900 hover:bg-zinc-50";
+  if (incorrect) return "bg-[var(--cell-bg-error)]";
+  if (techniqueHighlighted) return "bg-[var(--cell-bg-technique)]";
+  if (h.digitMatch) return "bg-[var(--cell-bg-same)]";
+  if (h.inBand) return "bg-[var(--cell-bg-peer)]";
+  if (h.selected) return "bg-[var(--cell-bg-selected)]";
+  return "bg-[var(--cell-bg)]";
+}
+
+function digitTextClass(fixedCell: boolean, incorrect: boolean): string {
+  if (incorrect) return "font-bold text-[var(--digit-error)]";
+  if (fixedCell) return "font-bold text-[var(--digit-given)]";
+  return "font-medium text-[var(--digit-user)]";
 }
 
 type SudokuBoardProps = {
@@ -150,7 +143,6 @@ type SudokuBoardProps = {
 export function SudokuBoard({
   gridValues,
   fixed,
-  cellReadOnly,
   selectedIndex,
   setSelectedIndex,
   board,
@@ -160,10 +152,18 @@ export function SudokuBoard({
   interactionDisabled = false,
 }: SudokuBoardProps) {
   return (
-    <div className="inline-block rounded-lg border-2 border-zinc-700 bg-white p-0.5 shadow-sm">
-      <div className="grid grid-cols-9">
+    <div
+      className="inline-block rounded-lg bg-[var(--cell-bg)] shadow-sm outline outline-2 -outline-offset-2 outline-[var(--rule-thick)]"
+      style={{ "--cell": CELL_SIZE_EXPR } as CSSProperties}
+    >
+      <div
+        className="grid"
+        style={{
+          gridTemplateColumns: "repeat(9, var(--cell))",
+          gridTemplateRows: "repeat(9, var(--cell))",
+        }}
+      >
         {gridValues.map((value, i) => {
-          const readOnly = cellReadOnly[i];
           const h = cellHighlights(i, selectedIndex, gridValues);
           const incorrect =
             solution81 !== undefined
@@ -173,14 +173,23 @@ export function SudokuBoard({
           const showMemo = value === 0 && mask !== 0;
           const techniqueHighlighted =
             techniqueHighlightedCells?.has(i) ?? false;
-          const commonClass = [
-            "flex h-9 w-9 font-medium sm:h-10 sm:w-10",
-            showMemo ? "items-stretch p-0" : "items-center justify-center p-0",
+          const cellSizeStyle: CSSProperties = {
+            width: "var(--cell)",
+            height: "var(--cell)",
+          };
+          const digitStyle: CSSProperties =
             !showMemo && value !== 0
-              ? "text-xl leading-none sm:text-2xl sm:leading-none"
-              : "",
+              ? { fontSize: "calc(var(--cell) * 0.58)" }
+              : {};
+          const commonClass = [
+            "flex leading-none",
+            showMemo ? "items-stretch p-0" : "items-center justify-center p-0",
             cellBorderClasses(i),
-            cellSurfaceClasses(readOnly, h, incorrect, techniqueHighlighted),
+            cellBackgroundClass(h, incorrect, techniqueHighlighted),
+            !showMemo && value !== 0 ? digitTextClass(fixed[i], incorrect) : "",
+            h.selected
+              ? "relative z-10 ring-2 ring-inset ring-[var(--ring-selected)]"
+              : "",
           ].join(" ");
           const children = showMemo ? (
             <CellMemoMarks mask={mask} highlightDigit={memoHighlightDigit} />
@@ -191,7 +200,12 @@ export function SudokuBoard({
           );
           if (interactionDisabled) {
             return (
-              <div key={i} className={commonClass} aria-hidden>
+              <div
+                key={i}
+                className={commonClass}
+                style={{ ...cellSizeStyle, ...digitStyle }}
+                aria-hidden
+              >
                 {children}
               </div>
             );
@@ -203,6 +217,7 @@ export function SudokuBoard({
               onClick={() => setSelectedIndex(i)}
               aria-current={h.selected ? "true" : undefined}
               className={commonClass}
+              style={{ ...cellSizeStyle, ...digitStyle }}
             >
               {children}
             </button>

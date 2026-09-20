@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { SudokuBoard } from "@/components/nanpure/SudokuBoard";
+import { CELL_SIZE_EXPR, SudokuBoard } from "@/components/nanpure/SudokuBoard";
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import { parseCandidateMasks81String, parsePuzzle81 } from "@/lib/validates/grid";
 
@@ -17,6 +17,7 @@ function digitFromKeyboardEvent(e: KeyboardEvent): number | null {
 }
 
 const EMPTY_VALUES = Array<number>(81).fill(0);
+const BOARD_GROUP_WIDTH_EXPR = `calc(${CELL_SIZE_EXPR} * 9)`;
 
 function isTypingInFormField(target: EventTarget | null): boolean {
   return (
@@ -141,7 +142,7 @@ export function SudokuCreateClient() {
   }, [applyDigit, clearSelection, toggleMemoAtSelection]);
 
   return (
-    <main className="mx-auto max-w-lg px-4 py-8">
+    <main className="mx-auto max-w-2xl px-4 py-8">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-zinc-900">盤面作成</h1>
@@ -154,61 +155,63 @@ export function SudokuCreateClient() {
         </Link>
       </div>
 
-      <div className="play-surface-cursor">
-        <SudokuBoard
-          gridValues={gridValues}
-          fixed={fixed}
-          cellReadOnly={cellReadOnly}
-          selectedIndex={selectedIndex}
-          setSelectedIndex={setSelectedIndex}
-          board={board}
-          memoHighlightDigit={memoHighlightDigit}
-          techniqueHighlightedCells={null}
-        />
-      </div>
-
-      <div className="mt-6 flex flex-col gap-3">
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setMemoMode((v) => !v)}
-            className={[
-              "rounded-md border px-3 py-1.5 text-sm font-medium",
-              memoMode
-                ? "border-sky-600 bg-sky-100 text-sky-900"
-                : "border-zinc-300 bg-zinc-50 text-zinc-700 hover:bg-zinc-100",
-            ].join(" ")}
-          >
-            {memoMode ? "メモモード ON" : "メモモード OFF"}
-          </button>
-          <button
-            type="button"
-            onClick={clearSelection}
-            disabled={selectedIndex === null}
-            className="rounded-md border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40"
-          >
-            選択マスをクリア
-          </button>
-          <button
-            type="button"
-            onClick={clearAll}
-            className="rounded-md border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
-          >
-            盤面を初期化
-          </button>
+      <div className="mx-auto" style={{ width: BOARD_GROUP_WIDTH_EXPR }}>
+        <div className="play-surface-cursor">
+          <SudokuBoard
+            gridValues={gridValues}
+            fixed={fixed}
+            cellReadOnly={cellReadOnly}
+            selectedIndex={selectedIndex}
+            setSelectedIndex={setSelectedIndex}
+            board={board}
+            memoHighlightDigit={memoHighlightDigit}
+            techniqueHighlightedCells={null}
+          />
         </div>
 
-        <div className="flex w-full max-w-full flex-nowrap items-stretch gap-0.5 sm:gap-1">
-          {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+        <div className="mt-6 flex flex-col gap-3">
+          <div className="flex items-center gap-2">
             <button
-              key={n}
               type="button"
-              onClick={() => applyDigit(n)}
-              className="flex min-h-11 min-w-0 flex-1 basis-0 touch-manipulation items-center justify-center rounded-md text-lg font-semibold text-zinc-900 active:bg-zinc-100 sm:min-h-12 sm:text-xl sm:hover:bg-zinc-50"
+              onClick={() => setMemoMode((v) => !v)}
+              className={[
+                "rounded-md border px-3 py-1.5 text-sm font-medium",
+                memoMode
+                  ? "border-sky-600 bg-sky-100 text-sky-900"
+                  : "border-zinc-300 bg-zinc-50 text-zinc-700 hover:bg-zinc-100",
+              ].join(" ")}
             >
-              {n}
+              {memoMode ? "メモモード ON" : "メモモード OFF"}
             </button>
-          ))}
+            <button
+              type="button"
+              onClick={clearSelection}
+              disabled={selectedIndex === null}
+              className="rounded-md border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40"
+            >
+              選択マスをクリア
+            </button>
+            <button
+              type="button"
+              onClick={clearAll}
+              className="rounded-md border border-zinc-300 bg-zinc-50 px-3 py-1.5 text-sm font-medium text-zinc-700 hover:bg-zinc-100"
+            >
+              盤面を初期化
+            </button>
+          </div>
+
+          <div className="flex w-full max-w-full flex-nowrap items-stretch gap-0.5 sm:gap-1">
+            {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+              <button
+                key={n}
+                type="button"
+                onClick={() => applyDigit(n)}
+                className="flex min-h-11 min-w-0 flex-1 basis-0 touch-manipulation items-center justify-center rounded-md text-lg font-semibold text-zinc-900 active:bg-zinc-100 sm:min-h-12 sm:text-xl sm:hover:bg-zinc-50"
+              >
+                {n}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
