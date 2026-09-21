@@ -12,32 +12,32 @@
 
 ## プロジェクトの目的
 
-- DB（Supabase）に保存されたナンプレ問題を取得し、画面上でプレイできるようにする。
-- 問題データ形式: `puzzle_81` / `solution_81` は各 81 文字（DB 制約とコメントに準拠）。アプリ側でも同じ前提で検証・型付けする。
+- ナンプレ問題をブラウザ内で生成し、画面上でプレイできるようにする。
+- 問題データ形式: `puzzle_81` / `solution_81` は各 81 文字（`lib/types/puzzle.ts` の `Puzzle`）。共有 URL・localStorage から読む値も同じ前提で検証する。
 
 ## 技術スタック（現状）
 
-- Next.js（App Router）、React、TypeScript、Tailwind CSS
-- バックエンド: Supabase（PostgreSQL + RLS）。マイグレーションは `supabase/migrations/`。
+- Next.js（App Router、`output: "export"` の静的サイト）、React、TypeScript、Tailwind CSS
+- バックエンドは無い。問題は Web Worker で生成し、在庫と解きかけ進行は localStorage に置く。GitHub Pages にデプロイする。
 
 ## コーディング・設計（優先度の目安）
 
 レビュー観点は `~/Life/prompts/reviews/code-review.md` と同じ優先順位を意識する。
 
-1. **設計との整合** — 責務分離、依存の向き（UI → データ取得層 → Supabase）、命名、レイヤ境界。既存のディレクトリ・パターンに合わせ、無関係なファイルは触らない。
-2. **エラーと例外** — 失敗パスを明示する（ネットワーク、空結果、不正データ、認可エラー）。ユーザー向けメッセージとログ/開発用情報を混同しない。同種の処理では同じ返却形式・同じエラー表現を使う。
+1. **設計との整合** — 責務分離、依存の向き（UI → `lib/services` → `lib/storage` / `lib/workers`）、命名、レイヤ境界。既存のディレクトリ・パターンに合わせ、無関係なファイルは触らない。
+2. **エラーと例外** — 失敗パスを明示する（生成失敗、不正な共有 URL、壊れた保存データ、localStorage へのアクセス失敗）。ユーザー向けメッセージとログ/開発用情報を混同しない。同種の処理では同じ返却形式・同じエラー表現を使う。
 3. **スタイルの一貫性** — 既存の import 順、コンポーネント分割、非同期の書き方に合わせる。新しい抽象は「複数箇所で効く」ときだけ導入する。
-4. **仕様・バグ耐性** — `null` / `undefined`、境界値、レース、ローディング中の二重送信などを考える。DB の CHECK とアプリのバリデーションを二重に持つ場合は、どちらがソース・オブ・トゥルースかをコメントまたは型で明確にする。
-5. **セキュリティ** — `NEXT_PUBLIC_*` はクライアントに露出する。秘密鍵や service role はクライアントに載せない。ユーザー入力の表示は XSS を意識する。RLS・ポリシー（`puzzles.sql` の select/insert の範囲）を変更するときは意図とリスクを明記する。
-6. **パフォーマンス** — 不要な再フェッチ、N+1、巨大レスポンスの無制限取得を避ける。一覧と詳細で必要な列・件数を分ける。
+4. **仕様・バグ耐性** — `null` / `undefined`、境界値、レース、ローディング中の二重送信などを考える。同じ検証を複数箇所に持つ場合は、どちらがソース・オブ・トゥルースかを型で明確にする。
+5. **セキュリティ** — 静的サイトなのでビルドに含めた値はすべてクライアントに露出する。秘密鍵を載せない。共有 URL（`?p=`）と localStorage は外部から書き換えられる入力として検証する。ユーザー入力の表示は XSS を意識する。
+6. **パフォーマンス** — メインスレッドを長く塞ぐ処理（生成・求解・レベル算出）は Worker に逃がすか、実測を `docs/architecture.md` に残す。不要な再計算を避ける。
 7. **テスト** — ロジック（盤面の検証、81 文字のパースなど）はユニットテストしやすい形に切り出す。変更時は少なくとも該当箇所の動作確認手順を PR 説明に書く。
 8. **保守性** — 「なぜこうしたか」は自明でないところだけ短く書く。マジックナンバー 81 や難易度コードは定数・型で表す。
 
-## データベース・運用
+## ローカル保存・運用
 
-- スキーマ変更は **必ず** `supabase/migrations/` に SQL として残し、本番・他環境と手順を揃える。口頭やダッシュボードだけの変更にしない。
+- DB は無い。端末内の保存は `lib/storage/` の localStorage だけ。キーとスキーマは `docs/architecture.md` の「データモデル」節を正とする。
+- 保存形式を変えるときはキーの版（`:v1`）を上げ、旧版のデータは検証して空扱いにする。
 - `.env.local` は Git に含めない。例やドキュメントに実キーを書かない。
-- RLS が有効なテーブルでは、「ポリシーで許可されていない操作」がアプリから呼ばれないよう、サーバー/クライアントのどちらで叩くかを一貫させる。
 
 ## エージェント向け作業ルール
 
@@ -71,11 +71,11 @@
 
 - 2026-03-29 — `next/image` が「width / height のどちらか一方だけ CSS で変えている」と警告することがある。アイコンは `h-*` と `w-*` を揃える（例: `h-4 w-4`）、または `style` で `width: "auto"` か `height: "auto"` を付けて縦横比を保つ。
 - 2026-03-29 — Tailwind（VS Code の suggestCanonicalClasses 等）では `bg-black/[.04]` のような括弧付き不透明度は `bg-black/4` のように書ける。同様に `border-black/8` など正規形を優先する。
-- 2026-03-29 — `docs/architecture.md` のディレクトリ節は **ファイル名を書かず、パスごとの役割だけを表で固定**する（実体とドキュメントの不一致を防ぐ）。`lib/` トップの目安は `supabase` / `repositories` / `services` / `types` / **`models`** / `utils` / **`algorithms`** / `validates`。`models` は DB 生データとは別の **集約モデル**（例: プレイ盤面）。`utils` は横断的な小さな純粋関数、求解など文字列盤エンジンは `algorithms`、ナンプレのパース・ルール・正誤の本丸は `validates`。
+- 2026-03-29 — `docs/architecture.md` のディレクトリ節は **ファイル名を書かず、パスごとの役割だけを表で固定**する（実体とドキュメントの不一致を防ぐ）。`lib/` トップの目安は `storage` / `workers` / `services` / `types` / **`models`** / `utils` / **`algorithms`** / `validates`（2026-09-20 の Supabase 廃止で `supabase` / `repositories` を `storage` / `workers` に置き換え）。`models` は DB 生データとは別の **集約モデル**（例: プレイ盤面）。`utils` は横断的な小さな純粋関数、求解など文字列盤エンジンは `algorithms`、ナンプレのパース・ルール・正誤の本丸は `validates`。
 - 2026-03-29 — **作業着手前に `docs/architecture.md` を読むこと**、**実装変更に伴い同セッションで doc を更新すること**を `AGENTS.md` 本文に明文化した（重複ルールの増殖を避けるため、詳細は本文「アーキテクチャドキュメント」節を正とする）。
-- 2026-03-29 — **`lib/repositories/`** は PostgREST / 通信エラーを **Result にまとめず `throw`**。**`lib/services/`** が try-catch して UI 向け outcome（リトライ・空・成功など）に変換する。`app/.../controller.ts` でユースケースを置かない（`lib/services/` に統一）。
+- 2026-03-29 — 失敗を UI 向け outcome に変換するのは **`lib/services/`** だけ。`app/.../controller.ts` でユースケースを置かない（`lib/services/` に統一）。2026-09-20 以降、下位層は **`lib/storage/` が `throw` せず `null` / `boolean` を返し**、**`lib/workers/` が Promise を reject する**（`lib/repositories/` は廃止）。
 - 2026-03-29 — 状態管理は **React Hooks（ローカル）＋サーバー（RSC / fetch）＋セッション**で進める。グローバルストアは必要になったら検討。
-- 2026-03-29 — プレイの正規 URL は **`/play/[id]`**。`/play` はランダム選定後リダイレクトのみ。
+- 2026-09-20 — プレイの正規 URL は **`/play/` + `?p=<puzzle_81>`**（静的エクスポートでは id を列挙できないため `/play/[id]` は廃止）。
 - 2026-03-30 — テクニック関連の実装時は `docs/sudoku-techniques.md` を確認する。
 - 2026-03-31 — 冗長な重複実装（特に同名/同等関数の複数定義）はバグ温床になるため、実装時に共通化を最優先する。追加前に既存 helper を確認し、同ロジックがあれば流用・統合する。
 - 2026-03-31 — 用語は `docs/sudoku-rule.md` を基準に使う。実装やドキュメントで未定義の概念/用語を使う場合は、同ファイルへ定義を追記してから使う。
@@ -84,5 +84,5 @@
 ## 参照
 
 - **アーキテクチャ（着手前に必読・更新もここ）**: `docs/architecture.md`
-- DB 定義: `supabase/migrations/`（例: `puzzles.sql`, `puzzles_level_range_extend.sql`, `puzzles_update_level_policy.sql`, `puzzle_solve_records.sql`）
+- 問題データの型: `lib/types/puzzle.ts`
 - 人間向けの起動・環境: `README.md`

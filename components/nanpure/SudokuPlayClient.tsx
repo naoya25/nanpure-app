@@ -11,18 +11,17 @@ import {
   runTechniqueAutoUntilNoChange,
 } from "@/lib/models/sudoku_technique_runner";
 import {
-  deletePlayProgress,
-  loadPlayProgress,
-  savePlayProgress,
-  type PlayProgressEntry,
-} from "@/lib/storage/play_progress";
+  clearSavedPlay,
+  loadSavedPlay,
+  savePlay,
+} from "@/lib/services/saved_play_progress";
 import type { Puzzle } from "@/lib/types/puzzle";
 import {
   TECHNIQUE_LABELS,
   TechniqueId,
 } from "@/lib/types/sudoku_technique_types";
 import { techniqueIdWebSearchUrl } from "@/lib/utils/technique_web_search";
-import { SUDOKU_CELLS, parsePuzzle81 } from "@/lib/validates/grid";
+import { parsePuzzle81 } from "@/lib/validates/grid";
 import {
   isBoardComplete,
   isBoardMatchingSolution,
@@ -55,16 +54,6 @@ function PresentTechniqueFootnote({ techniqueId }: { techniqueId: TechniqueId })
 }
 
 export type SudokuPlayPuzzle = Puzzle;
-
-function historyFromSavedProgress(saved: PlayProgressEntry): PlayHistory | null {
-  if (saved.values81.length !== SUDOKU_CELLS) return null;
-  if (saved.memoMasks81.length !== SUDOKU_CELLS) return null;
-  const values = [...saved.values81].map((ch) => Number(ch));
-  if (values.some((v) => !Number.isInteger(v) || v < 0 || v > 9)) return null;
-
-  const grid = SudokuGrid.fromValuesAndCandidateMasks(values, saved.memoMasks81);
-  return PlayHistory.create(grid);
-}
 
 /**
  * 数字行・テンキーの 1〜9。Shift で `e.key` が記号でも `code` の `Digit*` / `Numpad*` で拾う。
@@ -107,20 +96,19 @@ export function SudokuPlayClient({
     [puzzle.puzzle_81],
   );
 
-  const savedProgress = useMemo(
-    () => loadPlayProgress(puzzle.puzzle_81),
+  const savedPlay = useMemo(
+    () => loadSavedPlay(puzzle.puzzle_81),
     [puzzle.puzzle_81],
   );
 
   const [history, setHistory] = useState(
     () =>
-      (savedProgress && historyFromSavedProgress(savedProgress)) ??
-      PlayHistory.create(SudokuGrid.fromValues(seedValues)),
+      savedPlay?.history ?? PlayHistory.create(SudokuGrid.fromValues(seedValues)),
   );
   const historyRef = useRef(history);
   const board = history.present;
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [mistakes, setMistakes] = useState(savedProgress?.mistakes ?? 0);
+  const [mistakes, setMistakes] = useState(savedPlay?.mistakes ?? 0);
   const [phase, setPhase] = useState<"playing" | "result" | "review">(
     "playing",
   );
@@ -156,8 +144,8 @@ export function SudokuPlayClient({
   useEffect(() => {
     if (phase !== "playing") return;
     const timer = window.setTimeout(() => {
-      savePlayProgress(puzzle.puzzle_81, {
-        values81: gridValues.join(""),
+      savePlay(puzzle.puzzle_81, {
+        values: gridValues,
         memoMasks81,
         mistakes,
       });
@@ -167,7 +155,7 @@ export function SudokuPlayClient({
 
   useEffect(() => {
     if (phase !== "result") return;
-    deletePlayProgress(puzzle.puzzle_81);
+    clearSavedPlay(puzzle.puzzle_81);
   }, [phase, puzzle.puzzle_81]);
 
   /** 選択マスに確定数字があるとき、盤上のメモで同じ数字を強調する */

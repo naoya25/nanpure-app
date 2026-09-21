@@ -5,9 +5,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { SudokuPlayClient } from "@/components/nanpure/SudokuPlayClient";
 import { preparePuzzleForPlay } from "@/lib/services/prepare_puzzle_for_play";
-import { PUZZLE_STOCK_TARGET_SIZE, push, stockCount } from "@/lib/storage/puzzle_stock";
+import { replenishPuzzleStockInBackground } from "@/lib/services/replenish_puzzle_stock";
 import type { Puzzle } from "@/lib/types/puzzle";
-import { requestGeneratedPuzzle } from "@/lib/workers/generate_puzzle_client";
 
 const PAGE_TITLE = "プレイ(問題を選ぶ) | ナンプレトレーニング";
 
@@ -30,18 +29,6 @@ function replaceSharedPuzzleInUrl(puzzle81: string | null): void {
   window.history.replaceState(null, "", url);
 }
 
-function replenishStockInBackground(): void {
-  void (async () => {
-    while (stockCount() < PUZZLE_STOCK_TARGET_SIZE) {
-      try {
-        push(await requestGeneratedPuzzle());
-      } catch {
-        return;
-      }
-    }
-  })();
-}
-
 export default function PlayPage() {
   const [state, setState] = useState<PlayPageState>({ status: "loading" });
   const startedRef = useRef(false);
@@ -55,7 +42,7 @@ export default function PlayPage() {
       }
       replaceSharedPuzzleInUrl(result.puzzle.puzzle_81);
       setState({ status: "ready", ...result.puzzle });
-      replenishStockInBackground();
+      replenishPuzzleStockInBackground();
     })();
   }, []);
 
