@@ -11,6 +11,10 @@ import {
   runTechniqueAutoUntilNoChange,
 } from "@/lib/models/sudoku_technique_runner";
 import {
+  loadAutoRunTechniqueIds,
+  saveAutoRunTechniqueIds,
+} from "@/lib/services/auto_run_settings";
+import {
   clearSavedPlay,
   loadSavedPlay,
   savePlay,
@@ -117,13 +121,19 @@ export function SudokuPlayClient({
   const [techniqueHighlightedCells, setTechniqueHighlightedCells] =
     useState<ReadonlySet<number> | null>(null);
   const [selectedTechniqueIdsForAuto, setSelectedTechniqueIdsForAuto] =
-    useState<ReadonlySet<TechniqueId>>(initialAutoRunTechniqueSelection);
+    useState<ReadonlySet<TechniqueId>>(
+      () => loadAutoRunTechniqueIds() ?? initialAutoRunTechniqueSelection(),
+    );
 
   const techniqueButtons = TECHNIQUE_LABELS;
 
   useEffect(() => {
     historyRef.current = history;
   }, [history]);
+
+  useEffect(() => {
+    saveAutoRunTechniqueIds(selectedTechniqueIdsForAuto);
+  }, [selectedTechniqueIdsForAuto]);
 
   useEffect(() => {
     if (process.env.NODE_ENV !== "development") return;

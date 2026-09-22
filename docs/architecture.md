@@ -101,6 +101,7 @@ DB は無い。問題の形は `lib/types/puzzle.ts` の `Puzzle` 型のみ。
 
 - `nanpure:stock:v1`（`puzzle_stock.ts`）: 生成済み・未使用の `Puzzle` 配列。目標在庫数は 3 件。
 - `nanpure:progress:v1`（`play_progress.ts`）: 解きかけの盤面。`puzzle_81` をキーに最大 20 件、古い順に切り捨てる。**undo/redo 履歴は保存しない。**
+- `nanpure:settings:v1`（`play_settings.ts`）: プレイ画面の設定。自動実行で選択中のテクニック ID（`autoRunTechniqueIds: string[]`）。
 
 ## 開発の進め方
 
@@ -115,6 +116,7 @@ DB は無い。問題の形は `lib/types/puzzle.ts` の `Puzzle` 型のみ。
 
 ## 更新履歴
 
+- 2026-09-23: プレイ画面「自動実行」のテクニック選択チェックボックスを localStorage（`nanpure:settings:v1`, `lib/storage/play_settings.ts`）に保存し、リロード後も復元する。UI からの読み書きは `lib/services/auto_run_settings.ts` 経由。
 - 2026-09-21: レイヤー規則と実装の食い違いを解消。UI が `lib/storage/` / `lib/workers/` を直接 import していた箇所（在庫の裏補充、解きかけ進行の保存・復元）を `lib/services/` に移し、`eslint.config.mjs` の `no-restricted-imports` で向きを強制。テクニック関数は 2026-03-30 の記述（DTO、Grid 非依存）と違い当初から `SudokuGrid` を受け取っているため、実装を正としてレイヤー表・ディレクトリ表を直した（`lib/algorithms/techniques/` ↔ `lib/models/` の相互依存だけを許す）。`AGENTS.md` の Supabase 前提の記述も同時に更新。
 - 2026-09-20: Supabase を全廃止。問題の生成・保存はブラウザ内で完結する（`lib/workers/` で生成、`lib/storage/` で localStorage への在庫・進行保存）。プレイの正規 URL を `/play/[id]` から `/play/` + `?p=<puzzle_81>` に変更（`generateStaticParams()` で id を列挙できないため）。`lib/supabase/` `lib/repositories/` `supabase/migrations/` と DB 投入系 CLI（`create-puzzle` 等）を削除し、`lib/types/puzzle.ts` の `PuzzleRow` を `Puzzle`（`puzzle_81` / `solution_81` / `level` のみ）に置き換え。`next.config.ts` を `output: "export"` の静的サイトにし、GitHub Pages へデプロイする（`.github/workflows/deploy.yml`）。
 - 2026-04-06: 自動適用テクニック脚注の ID をクリックで `docs/sudoku-techniques.md` に対応した Google 検索を別タブで開く（`lib/utils/technique_web_search.ts`）。
