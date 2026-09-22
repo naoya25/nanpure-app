@@ -27,6 +27,11 @@ type ControlPadProps = {
   isPlaying: boolean;
   /** 盤の編集・テクニックは不可。undo / redo のみ有効にする（振り返り再生） */
   replayMode?: boolean;
+  /** テクニック自動実行のアニメーション再生中。数字・削除・undo/redo・自動実行・ヒントを disabled にする */
+  inputLocked?: boolean;
+  onHint: () => void;
+  canHint: boolean;
+  hintMessage: string | null;
   onFocusAnyControl: () => void;
 };
 
@@ -51,15 +56,19 @@ export function ControlPad({
   techniqueButtons,
   isPlaying,
   replayMode = false,
+  inputLocked: playbackLocked = false,
+  onHint,
+  canHint,
+  hintMessage,
   onFocusAnyControl,
 }: ControlPadProps) {
-  const inputLocked = replayMode;
+  const locked = replayMode || playbackLocked;
   return (
     <div className="mt-6 flex flex-col gap-3">
       <div className="flex w-full max-w-full flex-nowrap items-stretch gap-0.5 sm:gap-1">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => {
           const done = digitComplete[n];
-          const disabled = inputLocked || done;
+          const disabled = locked || done;
           return (
             <button
               key={n}
@@ -69,7 +78,7 @@ export function ControlPad({
               onFocus={onFocusAnyControl}
               className={[
                 "flex min-h-11 min-w-0 flex-1 basis-0 touch-manipulation items-center justify-center rounded-md border border-zinc-200 bg-white text-lg font-bold text-[var(--digit-given)] sm:min-h-12 sm:text-xl",
-                inputLocked
+                locked
                   ? "pointer-events-none opacity-40"
                   : done
                     ? "pointer-events-none invisible"
@@ -86,12 +95,12 @@ export function ControlPad({
           <button
             key={n}
             type="button"
-            disabled={inputLocked}
+            disabled={locked}
             onClick={() => onToggleMemo(n)}
             onFocus={onFocusAnyControl}
             className={[
               "flex min-h-11 min-w-0 flex-1 basis-0 touch-manipulation items-center justify-center rounded-md border border-dashed border-zinc-300 bg-zinc-50 text-lg font-normal text-[var(--memo)] sm:min-h-12 sm:text-xl",
-              inputLocked
+              locked
                 ? "pointer-events-none opacity-40"
                 : "active:bg-zinc-100 sm:hover:bg-zinc-100",
             ].join(" ")}
@@ -104,7 +113,7 @@ export function ControlPad({
         <div className="flex items-center justify-center gap-2">
           <button
             type="button"
-            disabled={(!replayMode && !isPlaying) || !canUndo}
+            disabled={(!replayMode && !isPlaying) || !canUndo || playbackLocked}
             onClick={onUndo}
             onFocus={onFocusAnyControl}
             title="一手戻る"
@@ -115,7 +124,7 @@ export function ControlPad({
           </button>
           <button
             type="button"
-            disabled={inputLocked || !canClearCell}
+            disabled={locked || !canClearCell}
             onClick={onClearCell}
             onFocus={onFocusAnyControl}
             title="選択中のマスの数字とメモを消す（Backspace でも可）"
@@ -126,7 +135,7 @@ export function ControlPad({
           </button>
           <button
             type="button"
-            disabled={(!replayMode && !isPlaying) || !canRedo}
+            disabled={(!replayMode && !isPlaying) || !canRedo || playbackLocked}
             onClick={onRedo}
             onFocus={onFocusAnyControl}
             title="一手進める"
@@ -140,14 +149,28 @@ export function ControlPad({
             onClick={onToggleAutoRunList}
             onFocus={onFocusAnyControl}
             aria-expanded={showAutoRunList ? "true" : undefined}
-            disabled={inputLocked || !isPlaying}
+            disabled={locked || !isPlaying}
             title="テクニック自動実行の設定"
             aria-label="テクニック自動実行の設定"
             className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-50 text-zinc-700 active:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-100"
           >
             <AutoRunIcon className="h-5 w-5 sm:h-6 sm:w-6" />
           </button>
+          <button
+            type="button"
+            onClick={onHint}
+            onFocus={onFocusAnyControl}
+            disabled={locked || !isPlaying || !canHint}
+            title="選択中のテクニックで一手だけ進める"
+            aria-label="ヒント"
+            className="inline-flex min-h-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-50 px-3 text-sm font-medium text-zinc-700 active:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:hover:bg-zinc-100"
+          >
+            ヒント
+          </button>
         </div>
+        {hintMessage ? (
+          <p className="text-xs text-zinc-500">{hintMessage}</p>
+        ) : null}
         <AutoRunPopover
           open={showAutoRunList}
           techniques={techniqueButtons}

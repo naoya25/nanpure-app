@@ -115,11 +115,13 @@ export function runTechniqueAutoUntilNoChange(
   grid: SudokuGrid,
   selectedTechniqueIds: readonly TechniqueId[],
   solution81?: string,
+  options?: { maxSteps?: number },
 ): TechniqueAutoRunResult {
   const ordered = sortByTechniqueOrder(selectedTechniqueIds);
   if (ordered.length === 0) {
     return { grid, steps: [], finishedBecauseNoChange: true, conflictCellIndex: null };
   }
+  const maxSteps = options?.maxSteps;
 
   let nextGrid = grid;
   const steps: TechniqueAutoRunResult["steps"] = [];
@@ -151,6 +153,15 @@ export function runTechniqueAutoUntilNoChange(
         steps,
         finishedBecauseNoChange: false,
         conflictCellIndex: beforeConflict,
+      };
+    }
+
+    if (maxSteps !== undefined && steps.length >= maxSteps) {
+      return {
+        grid: nextGrid,
+        steps,
+        finishedBecauseNoChange: false,
+        conflictCellIndex: null,
       };
     }
 

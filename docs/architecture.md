@@ -57,7 +57,7 @@ Supabase はもう無い。問題はすべてブラウザ側で完結して用�
 | **ローカル永続化** | `lib/storage/` — localStorage の読み書き（在庫・解きかけ進行）。アクセス自体が失敗しうるため `throw` せず `null` / `boolean` で返す。 |
 | **生成** | `lib/workers/` — Web Worker で問題を生成し、失敗時はメインスレッドの同期処理にフォールバックする。 |
 | **型** | `lib/types/` — アプリ用の **型定義**（`Puzzle` など）。振る舞いのないデータ形だけ。 |
-| **ドメインモデル** | `lib/models/` — 画面や操作で扱いやすい **オブジェクトの集約**。素の文字列や配列とは別表現でよい。**論理解法テクニックを 1 手ずつ適用する窓口**（`SudokuGrid` を受け、難易度順のオーケストレーションやヒント用の最初の手の返却など）もここに置く。中身の各テクニック判定は `lib/algorithms/techniques/` の純粋関数を呼ぶ。 |
+| **ドメインモデル** | `lib/models/` — 画面や操作で扱いやすい **オブジェクトの集約**。素の文字列や配列とは別表現でよい。**論理解法テクニックを 1 手ずつ適用する窓口**（`SudokuGrid` を受け、難易度順のオーケストレーションや `runTechniqueAutoUntilNoChange` の `maxSteps` オプションによるヒント用の最初の手の返却など）もここに置く。中身の各テクニック判定は `lib/algorithms/techniques/` の純粋関数を呼ぶ。 |
 | **ドメイン（純粋ロジック）** | `lib/validates/` — React ・ `fetch` を持たない TS。81 文字 ↔ セル、固定マス判定、マス単位の正誤など。 |
 | **アルゴリズム** | `lib/algorithms/` — **81 文字列の盤**の求解・列挙・検証に加え、**各解法テクニックの 1 手分ロジック**（`techniques/` 以下）を置く。テクニック関数は **`lib/models/` の `SudokuGrid` を受け取り**、次の盤（`SudokuGrid`）と変更マスを返す。このため `lib/algorithms/techniques/` → `lib/models/`（盤の型）と `lib/models/` → `lib/algorithms/techniques/`（適用順の窓口）は相互に依存する。許しているのはこの 1 組だけで、`techniques/` 以外の `lib/algorithms/` は `lib/models/` を import しない。UI からテクニックを直接呼ばない。 |
 | **ユースケース** | `lib/services/` のみ — `lib/storage/` と `lib/workers/` を呼び、**outcome（`ok` / `invalid_shared_puzzle` / `generation_failed`）** に変換。try-catch は主にここ。 |
@@ -116,6 +116,7 @@ DB は無い。問題の形は `lib/types/puzzle.ts` の `Puzzle` 型のみ。
 
 ## 更新履歴
 
+- 2026-09-23: 自動実行を 1 手ずつアニメーションで進める再生 hook（`components/nanpure/useTechniquePlayback.ts`）を追加し、`SudokuPlayClient` の自動実行・ヒントから使う。ヒントは `runTechniqueAutoUntilNoChange`（`lib/models/sudoku_technique_runner.ts`）に足した `options.maxSteps` で最初の 1 手だけを取得する。`play_session.ts` の action は増やしていない。
 - 2026-09-23: プレイ画面（`SudokuPlayClient`）のドメイン状態（history / mistakes / phase / playback ロック）を React 非依存の reducer（`lib/models/play_session.ts` の `playSessionReducer`）へ移した（純粋リファクタ、挙動は変えない）。UI は `useReducer` でこれを呼び、`selectedIndex` 等の画面専用 state のみ引き続き `useState` で持つ。
 - 2026-09-23: プレイ画面「自動実行」のテクニック選択チェックボックスを localStorage（`nanpure:settings:v1`, `lib/storage/play_settings.ts`）に保存し、リロード後も復元する。UI からの読み書きは `lib/services/auto_run_settings.ts` 経由。
 - 2026-09-21: レイヤー規則と実装の食い違いを解消。UI が `lib/storage/` / `lib/workers/` を直接 import していた箇所（在庫の裏補充、解きかけ進行の保存・復元）を `lib/services/` に移し、`eslint.config.mjs` の `no-restricted-imports` で向きを強制。テクニック関数は 2026-03-30 の記述（DTO、Grid 非依存）と違い当初から `SudokuGrid` を受け取っているため、実装を正としてレイヤー表・ディレクトリ表を直した（`lib/algorithms/techniques/` ↔ `lib/models/` の相互依存だけを許す）。`AGENTS.md` の Supabase 前提の記述も同時に更新。

@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 
 import { ControlPad } from "@/components/nanpure/ControlPad";
 import { CELL_SIZE_EXPR, SudokuBoard } from "@/components/nanpure/SudokuBoard";
+import { useTechniquePlayback } from "@/components/nanpure/useTechniquePlayback";
 import {
   createPlaySession,
   isCellReadOnly,
@@ -29,11 +30,13 @@ import type { Puzzle } from "@/lib/types/puzzle";
 import {
   TECHNIQUE_LABELS,
   TechniqueId,
+  type TechniqueAutoRunStep,
 } from "@/lib/types/sudoku_technique_types";
 import { techniqueIdWebSearchUrl } from "@/lib/utils/technique_web_search";
 import { parsePuzzle81 } from "@/lib/validates/grid";
 
 const PROGRESS_SAVE_DEBOUNCE_MS = 300;
+const HINT_MESSAGE_TIMEOUT_MS = 3000;
 const BOARD_GROUP_WIDTH_EXPR = `calc(${CELL_SIZE_EXPR} * 9)`;
 
 function PuzzleDifficultyLine({ level }: { level: number }) {
@@ -129,12 +132,31 @@ export function SudokuPlayClient({
     useState<ReadonlySet<TechniqueId>>(
       () => loadAutoRunTechniqueIds() ?? initialAutoRunTechniqueSelection(),
     );
+  const [hintMessage, setHintMessage] = useState<string | null>(null);
+
+  const handleTechniqueStepShown = useCallback((step: TechniqueAutoRunStep) => {
+    setTechniqueHighlightedCells(new Set(step.cellIndex));
+  }, []);
+  const {
+    play: playTechniqueSteps,
+    skip: skipTechniquePlayback,
+    isPlaying: isTechniquePlaying,
+  } = useTechniquePlayback(dispatch, handleTechniqueStepShown);
 
   const techniqueButtons = TECHNIQUE_LABELS;
 
   useEffect(() => {
     saveAutoRunTechniqueIds(selectedTechniqueIdsForAuto);
   }, [selectedTechniqueIdsForAuto]);
+
+  useEffect(() => {
+    if (hintMessage === null) return;
+    const timer = window.setTimeout(
+      () => setHintMessage(null),
+      HINT_MESSAGE_TIMEOUT_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [hintMessage]);
 
   useEffect(() => {
     if (process.env.NODE_ENV !== "development") return;
@@ -217,6 +239,7 @@ export function SudokuPlayClient({
 
   const applyTechniquesAuto = useCallback(() => {
     if (phase.kind !== "playing") return;
+    if (isTechniquePlaying) return;
     const ids = Array.from(selectedTechniqueIdsForAuto);
     if (ids.length === 0) return;
 
@@ -226,23 +249,59 @@ export function SudokuPlayClient({
       puzzle.solution_81,
     );
 
-    if (steps.length === 0) {
-      setShowAutoRunList(false);
+    setShowAutoRunList(false);
+    if (steps.length === 0) return;
+
+    setHintMessage(null);
+    playTechniqueSteps(steps);
+  }, [
+    phase,
+    isTechniquePlaying,
+    history,
+    puzzle.solution_81,
+    selectedTechniqueIdsForAuto,
+    playTechniqueSteps,
+  ]);
+
+  const requestHint = useCallback(() => {
+    if (phase.kind !== "playing") return;
+    if (isTechniquePlaying) return;
+    const ids = Array.from(selectedTechniqueIdsForAuto);
+    if (ids.length === 0) return;
+
+    const { steps, conflictCellIndex } = runTechniqueAutoUntilNoChange(
+      history.present,
+      ids,
+      puzzle.solution_81,
+      { maxSteps: 1 },
+    );
+
+    if (conflictCellIndex) {
+      setHintMessage("間違っているマスがあります");
+      setTechniqueHighlightedCells(new Set(conflictCellIndex));
       return;
     }
 
-    for (const step of steps) {
-      dispatch({ type: "applyTechniqueStep", step });
+    if (steps.length === 0) {
+      setHintMessage("選択中のテクニックでは進めません");
+      return;
     }
 
-    const highlighted = new Set<number>();
-    for (const step of steps) {
-      for (const i of step.cellIndex) highlighted.add(i);
-    }
-    setTechniqueHighlightedCells(highlighted);
+    setHintMessage(null);
+    playTechniqueSteps(steps);
+  }, [
+    phase,
+    isTechniquePlaying,
+    history,
+    puzzle.solution_81,
+    selectedTechniqueIdsForAuto,
+    playTechniqueSteps,
+  ]);
 
-    setShowAutoRunList(false);
-  }, [phase, history, puzzle.solution_81, selectedTechniqueIdsForAuto]);
+  const canHint =
+    phase.kind === "playing" &&
+    !isTechniquePlaying &&
+    selectedTechniqueIdsForAuto.size > 0;
 
   const clearCell = useCallback(() => {
     if (phase.kind !== "playing") return;
@@ -292,18 +351,25 @@ export function SudokuPlayClient({
     setTechniqueHighlightedCells(null);
   }, []);
 
-  const handleSelectIndex = useCallback((index: number) => {
-    setSelectedIndex(index);
-    setTechniqueHighlightedCells(null);
-  }, []);
+  const handleSelectIndex = useCallback(
+    (index: number) => {
+      if (isTechniquePlaying) skipTechniquePlayback();
+      setSelectedIndex(index);
+      setTechniqueHighlightedCells(null);
+      setHintMessage(null);
+    },
+    [isTechniquePlaying, skipTechniquePlayback],
+  );
 
   const clearTechniqueHighlightOnFocus = useCallback(() => {
     setTechniqueHighlightedCells(null);
+    setHintMessage(null);
   }, []);
 
   useEffect(() => {
     if (phase.kind !== "playing") return;
     const onKeyDown = (e: KeyboardEvent) => {
+      if (isTechniquePlaying) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
 
       const digit = digitFromKeyboardEvent(e);
@@ -321,7 +387,7 @@ export function SudokuPlayClient({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [phase, applyDigit, clearCell, toggleMemoAtSelection]);
+  }, [phase, isTechniquePlaying, applyDigit, clearCell, toggleMemoAtSelection]);
 
   if (phase.kind === "result") {
     return (
@@ -432,6 +498,9 @@ export function SudokuPlayClient({
             techniqueButtons={techniqueButtons}
             isPlaying={false}
             replayMode
+            onHint={requestHint}
+            canHint={false}
+            hintMessage={null}
             onFocusAnyControl={clearTechniqueHighlightOnFocus}
           />
         </div>
@@ -518,6 +587,10 @@ export function SudokuPlayClient({
           }
           techniqueButtons={techniqueButtons}
           isPlaying={phase.kind === "playing"}
+          inputLocked={isTechniquePlaying}
+          onHint={requestHint}
+          canHint={canHint}
+          hintMessage={hintMessage}
           onFocusAnyControl={clearTechniqueHighlightOnFocus}
         />
       </div>
