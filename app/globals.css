@@ -51,3 +51,25 @@ body {
     cursor: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAACAAAAAgBAMAAACBVGfHAAAAIGNIUk0AAHomAACAhAAA+gAAAIDoAAB1MAAA6mAAADqYAAAXcJy6UTwAAAAPUExURQAAACVj6yVj6yVj6////9Y+prAAAAADdFJOUwAos/VDiEIAAAABYktHRASPaNlRAAAAB3RJTUUH6gMeABEYzNhzfgAAACV0RVh0ZGF0ZTpjcmVhdGUAMjAyNi0wMy0zMFQwMDoxNzoyNCswMDowMBuZBogAAAAldEVYdGRhdGU6bW9kaWZ5ADIwMjYtMDMtMzBUMDA6MTc6MjQrMDA6MDBqxL40AAAAKHRFWHRkYXRlOnRpbWVzdGFtcAAyMDI2LTAzLTMwVDAwOjE3OjI0KzAwOjAwPdGf6wAAACpJREFUKM9jYBgBQMhIAIXPaGxsiCLAZGxshCLAbGxsjF8FhhkYtgwLAADEAQOpT1yMlQAAAABJRU5ErkJggg==") 16 16, auto;
   }
 }
+
+@keyframes cell-celebrate {
+  0% {
+    background-color: var(--cell-bg);
+  }
+  40% {
+    background-color: #fcd34d;
+  }
+  100% {
+    background-color: var(--cell-bg);
+  }
+}
+
+.cell-celebrate {
+  animation: cell-celebrate 0.4s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cell-celebrate {
+    animation: none;
+  }
+}

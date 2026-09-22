@@ -1,5 +1,5 @@
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
-import type { TechniqueId } from "@/lib/types/sudoku_technique_types";
+import { TechniqueId } from "@/lib/types/sudoku_technique_types";
 
 export type PlayHistoryEntry = {
   grid: SudokuGrid;
@@ -75,5 +75,32 @@ export class PlayHistory {
     const [next, ...futureRest] = this.future;
     const past = [...this.past, this.presentEntry];
     return new PlayHistory(past, next, futureRest);
+  }
+
+  /**
+   * `past` + `presentEntry`（undo で捨てた `future` は含まない）の集計。
+   * `PlayHistory.create` の初期エントリ（`cellIndex === null && techniqueId === null`）は除く。
+   */
+  techniqueUsageOnCurrentPath(): {
+    byTechnique: ReadonlyMap<TechniqueId, number>;
+    manualSteps: number;
+  } {
+    const counts = new Map<TechniqueId, number>();
+    let manualSteps = 0;
+    for (const entry of [...this.past, this.presentEntry]) {
+      if (entry.cellIndex === null && entry.techniqueId === null) continue;
+      if (entry.techniqueId === null) {
+        manualSteps += 1;
+        continue;
+      }
+      counts.set(entry.techniqueId, (counts.get(entry.techniqueId) ?? 0) + 1);
+    }
+
+    const byTechnique = new Map<TechniqueId, number>();
+    for (const id of Object.values(TechniqueId)) {
+      const count = counts.get(id);
+      if (count !== undefined) byTechnique.set(id, count);
+    }
+    return { byTechnique, manualSteps };
   }
 }

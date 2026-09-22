@@ -116,6 +116,7 @@ DB は無い。問題の形は `lib/types/puzzle.ts` の `Puzzle` 型のみ。
 
 ## 更新履歴
 
+- 2026-09-23: クリア時に `SudokuBoard` の `celebrate` prop（`app/globals.css` の `cell-celebrate` keyframes）で盤を光らせる演出を追加し、結果画面に `PlayHistory.techniqueUsageOnCurrentPath()`（`past` + `presentEntry` 集計、undo で捨てた手は含まない）で集計した使用テクニック一覧を表示する。結果画面 JSX は `components/nanpure/PlayResultPanel.tsx` に切り出した。
 - 2026-09-23: 自動実行を 1 手ずつアニメーションで進める再生 hook（`components/nanpure/useTechniquePlayback.ts`）を追加し、`SudokuPlayClient` の自動実行・ヒントから使う。ヒントは `runTechniqueAutoUntilNoChange`（`lib/models/sudoku_technique_runner.ts`）に足した `options.maxSteps` で最初の 1 手だけを取得する。`play_session.ts` の action は増やしていない。
 - 2026-09-23: プレイ画面（`SudokuPlayClient`）のドメイン状態（history / mistakes / phase / playback ロック）を React 非依存の reducer（`lib/models/play_session.ts` の `playSessionReducer`）へ移した（純粋リファクタ、挙動は変えない）。UI は `useReducer` でこれを呼び、`selectedIndex` 等の画面専用 state のみ引き続き `useState` で持つ。
 - 2026-09-23: プレイ画面「自動実行」のテクニック選択チェックボックスを localStorage（`nanpure:settings:v1`, `lib/storage/play_settings.ts`）に保存し、リロード後も復元する。UI からの読み書きは `lib/services/auto_run_settings.ts` 経由。

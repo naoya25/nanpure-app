@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 
 import { ControlPad } from "@/components/nanpure/ControlPad";
+import { PlayResultPanel } from "@/components/nanpure/PlayResultPanel";
 import { CELL_SIZE_EXPR, SudokuBoard } from "@/components/nanpure/SudokuBoard";
 import { useTechniquePlayback } from "@/components/nanpure/useTechniquePlayback";
 import {
@@ -37,7 +38,15 @@ import { parsePuzzle81 } from "@/lib/validates/grid";
 
 const PROGRESS_SAVE_DEBOUNCE_MS = 300;
 const HINT_MESSAGE_TIMEOUT_MS = 3000;
+const CELEBRATE_MS = 1300;
 const BOARD_GROUP_WIDTH_EXPR = `calc(${CELL_SIZE_EXPR} * 9)`;
+
+function prefersReducedMotion(): boolean {
+  if (typeof window === "undefined" || typeof window.matchMedia !== "function") {
+    return false;
+  }
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
 
 function PuzzleDifficultyLine({ level }: { level: number }) {
   return (
@@ -133,6 +142,31 @@ export function SudokuPlayClient({
       () => loadAutoRunTechniqueIds() ?? initialAutoRunTechniqueSelection(),
     );
   const [hintMessage, setHintMessage] = useState<string | null>(null);
+  const [celebrating, setCelebrating] = useState(false);
+  const [prevPhaseKind, setPrevPhaseKind] = useState(phase.kind);
+
+  if (phase.kind !== prevPhaseKind) {
+    setPrevPhaseKind(phase.kind);
+    if (prevPhaseKind === "playing" && phase.kind === "result" && phase.won) {
+      setCelebrating(true);
+    }
+  }
+
+  useEffect(() => {
+    if (!celebrating) return;
+    const timer = window.setTimeout(
+      () => setCelebrating(false),
+      prefersReducedMotion() ? 0 : CELEBRATE_MS,
+    );
+    return () => window.clearTimeout(timer);
+  }, [celebrating]);
+
+  const celebratingWin = phase.kind === "result" && phase.won && celebrating;
+
+  const techniqueUsage = useMemo(
+    () => history.techniqueUsageOnCurrentPath(),
+    [history],
+  );
 
   const handleTechniqueStepShown = useCallback((step: TechniqueAutoRunStep) => {
     setTechniqueHighlightedCells(new Set(step.cellIndex));
@@ -389,47 +423,16 @@ export function SudokuPlayClient({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [phase, isTechniquePlaying, applyDigit, clearCell, toggleMemoAtSelection]);
 
-  if (phase.kind === "result") {
+  if (phase.kind === "result" && !celebratingWin) {
     return (
-      <main className="mx-auto max-w-md px-4 py-12">
-        <h1 className="text-2xl font-semibold text-zinc-900">
-          {phase.won ? "クリア！" : "残念…"}
-        </h1>
-        <p className="mt-4 text-zinc-600">
-          {phase.won
-            ? "すべてのマスが正解です。"
-            : "マスはすべて埋まりましたが、どこかが正解と異なります。"}
-        </p>
-        <PuzzleDifficultyLine level={puzzle.level} />
-        <p className="mt-2 text-sm text-zinc-500">
-          間違えた入力の回数（目安）:{" "}
-          <span className="font-medium text-zinc-800">{mistakes}</span>
-        </p>
-        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          {phase.won ? (
-            <button
-              type="button"
-              onClick={startReplayFromResult}
-              className="inline-flex justify-center rounded-lg border border-amber-600 bg-amber-50 px-4 py-2.5 text-sm font-medium text-amber-950 hover:bg-amber-100"
-            >
-              振り返る
-            </button>
-          ) : null}
-          <button
-            type="button"
-            onClick={onRequestNewPuzzle}
-            className="inline-flex justify-center rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-800"
-          >
-            別の問題（ランダム）
-          </button>
-          <Link
-            href="/"
-            className="inline-flex justify-center rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
-          >
-            トップへ
-          </Link>
-        </div>
-      </main>
+      <PlayResultPanel
+        won={phase.won}
+        level={puzzle.level}
+        mistakes={mistakes}
+        techniqueUsage={techniqueUsage}
+        onRequestNewPuzzle={onRequestNewPuzzle}
+        onStartReplay={startReplayFromResult}
+      />
     );
   }
 
@@ -552,6 +555,7 @@ export function SudokuPlayClient({
           memoHighlightDigit={memoHighlightDigit}
           solution81={puzzle.solution_81}
           techniqueHighlightedCells={techniqueHighlightedCells}
+          celebrate={celebratingWin}
         />
         {history.presentTechniqueId ? (
           <PresentTechniqueFootnote techniqueId={history.presentTechniqueId} />

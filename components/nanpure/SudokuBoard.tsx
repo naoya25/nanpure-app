@@ -6,6 +6,8 @@ import { isCellMismatchingSolution } from "@/lib/validates/validate";
 export const CELL_SIZE_EXPR =
   "max(30px, calc(min(100vw - 2rem, 34rem, 100vh - 22rem) / 9))";
 
+const CELEBRATE_STEP_DELAY_MS = 12;
+
 function cellBorderClasses(index: number): string {
   const row = Math.floor(index / 9);
   const col = index % 9;
@@ -138,6 +140,8 @@ type SudokuBoardProps = {
   techniqueHighlightedCells: ReadonlySet<number> | null;
   /** true のときセルをクリック・フォーカスできない（振り返り再生など） */
   interactionDisabled?: boolean;
+  /** true のとき各マスが順に光るクリア演出を再生する */
+  celebrate?: boolean;
 };
 
 export function SudokuBoard({
@@ -150,6 +154,7 @@ export function SudokuBoard({
   solution81,
   techniqueHighlightedCells,
   interactionDisabled = false,
+  celebrate = false,
 }: SudokuBoardProps) {
   return (
     <div
@@ -181,6 +186,9 @@ export function SudokuBoard({
             !showMemo && value !== 0
               ? { fontSize: "calc(var(--cell) * 0.58)" }
               : {};
+          const celebrateStyle: CSSProperties = celebrate
+            ? { animationDelay: `${i * CELEBRATE_STEP_DELAY_MS}ms` }
+            : {};
           const commonClass = [
             "flex leading-none",
             showMemo ? "items-stretch p-0" : "items-center justify-center p-0",
@@ -190,6 +198,7 @@ export function SudokuBoard({
             h.selected
               ? "relative z-10 ring-2 ring-inset ring-[var(--ring-selected)]"
               : "",
+            celebrate ? "cell-celebrate" : "",
           ].join(" ");
           const children = showMemo ? (
             <CellMemoMarks mask={mask} highlightDigit={memoHighlightDigit} />
@@ -203,7 +212,7 @@ export function SudokuBoard({
               <div
                 key={i}
                 className={commonClass}
-                style={{ ...cellSizeStyle, ...digitStyle }}
+                style={{ ...cellSizeStyle, ...digitStyle, ...celebrateStyle }}
                 aria-hidden
               >
                 {children}
@@ -217,7 +226,7 @@ export function SudokuBoard({
               onClick={() => setSelectedIndex(i)}
               aria-current={h.selected ? "true" : undefined}
               className={commonClass}
-              style={{ ...cellSizeStyle, ...digitStyle }}
+              style={{ ...cellSizeStyle, ...digitStyle, ...celebrateStyle }}
             >
               {children}
             </button>
