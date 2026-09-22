@@ -1,10 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 
 import { ControlPad } from "@/components/nanpure/ControlPad";
 import { CELL_SIZE_EXPR, SudokuBoard } from "@/components/nanpure/SudokuBoard";
+import {
+  createPlaySession,
+  isCellReadOnly,
+  isDigitComplete,
+  playSessionReducer,
+} from "@/lib/models/play_session";
 import { PlayHistory } from "@/lib/models/play_history";
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import {
@@ -26,11 +32,6 @@ import {
 } from "@/lib/types/sudoku_technique_types";
 import { techniqueIdWebSearchUrl } from "@/lib/utils/technique_web_search";
 import { parsePuzzle81 } from "@/lib/validates/grid";
-import {
-  isBoardComplete,
-  isBoardMatchingSolution,
-  isEverySolutionCellForDigitFilled,
-} from "@/lib/validates/validate";
 
 const PROGRESS_SAVE_DEBOUNCE_MS = 300;
 const BOARD_GROUP_WIDTH_EXPR = `calc(${CELL_SIZE_EXPR} * 9)`;
@@ -105,18 +106,22 @@ export function SudokuPlayClient({
     [puzzle.puzzle_81],
   );
 
-  const [history, setHistory] = useState(
+  const [state, dispatch] = useReducer(
+    playSessionReducer,
+    undefined,
     () =>
-      savedPlay?.history ?? PlayHistory.create(SudokuGrid.fromValues(seedValues)),
+      createPlaySession(
+        { fixed, solution81: puzzle.solution_81 },
+        savedPlay?.history ??
+          PlayHistory.create(SudokuGrid.fromValues(seedValues)),
+        savedPlay?.mistakes ?? 0,
+      ),
   );
-  const historyRef = useRef(history);
+  const history = state.history;
+  const mistakes = state.mistakes;
+  const phase = state.phase;
   const board = history.present;
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
-  const [mistakes, setMistakes] = useState(savedPlay?.mistakes ?? 0);
-  const [phase, setPhase] = useState<"playing" | "result" | "review">(
-    "playing",
-  );
-  const [won, setWon] = useState<boolean | null>(null);
   const [showAutoRunList, setShowAutoRunList] = useState(false);
   const [techniqueHighlightedCells, setTechniqueHighlightedCells] =
     useState<ReadonlySet<number> | null>(null);
@@ -126,10 +131,6 @@ export function SudokuPlayClient({
     );
 
   const techniqueButtons = TECHNIQUE_LABELS;
-
-  useEffect(() => {
-    historyRef.current = history;
-  }, [history]);
 
   useEffect(() => {
     saveAutoRunTechniqueIds(selectedTechniqueIdsForAuto);
@@ -152,7 +153,7 @@ export function SudokuPlayClient({
   );
 
   useEffect(() => {
-    if (phase !== "playing") return;
+    if (phase.kind !== "playing") return;
     const timer = window.setTimeout(() => {
       savePlay(puzzle.puzzle_81, {
         values: gridValues,
@@ -164,7 +165,7 @@ export function SudokuPlayClient({
   }, [gridValues, memoMasks81, mistakes, phase, puzzle.puzzle_81]);
 
   useEffect(() => {
-    if (phase !== "result") return;
+    if (phase.kind !== "result") return;
     clearSavedPlay(puzzle.puzzle_81);
   }, [phase, puzzle.puzzle_81]);
 
@@ -175,54 +176,27 @@ export function SudokuPlayClient({
     return v >= 1 && v <= 9 ? v : null;
   }, [selectedIndex, gridValues]);
 
-  /** ヒントマス、またはユーザーが入れた数字がそのマスの正解と一致しているマスは編集不可 */
   const cellReadOnly = useMemo(
-    () =>
-      gridValues.map((v, i) => {
-        if (fixed[i]) return true;
-        return v >= 1 && v <= 9 && String(v) === puzzle.solution_81[i];
-      }),
-    [gridValues, fixed, puzzle.solution_81],
+    () => Array.from({ length: 81 }, (_, i) => isCellReadOnly(state, i)),
+    [state],
   );
 
   const digitComplete = useMemo(() => {
-    const sol = puzzle.solution_81;
     return [
       false,
-      ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) =>
-        isEverySolutionCellForDigitFilled(d, gridValues, sol),
-      ),
+      ...[1, 2, 3, 4, 5, 6, 7, 8, 9].map((d) => isDigitComplete(state, d)),
     ] as const;
-  }, [gridValues, puzzle.solution_81]);
+  }, [state]);
 
   const applyDigit = useCallback(
     (digit: number) => {
-      if (phase !== "playing") return;
+      if (phase.kind !== "playing") return;
       if (digitComplete[digit]) return;
       if (selectedIndex === null || cellReadOnly[selectedIndex]) return;
-      const i = selectedIndex;
-      const h = historyRef.current;
-      const { next, matchesSolution } = h.present.placeDigit(
-        i,
-        digit,
-        puzzle.solution_81,
-      );
-      const nh = h.recordNext(next, null, [i]);
-      setHistory(nh);
+      dispatch({ type: "placeDigit", index: selectedIndex, digit });
       setTechniqueHighlightedCells(null);
-
-      if (!matchesSolution) {
-        setMistakes((m) => m + 1);
-        return;
-      }
-
-      const values = [...next.values()];
-      if (isBoardComplete(values)) {
-        setPhase("result");
-        setWon(isBoardMatchingSolution(values, puzzle.solution_81));
-      }
     },
-    [phase, digitComplete, selectedIndex, cellReadOnly, puzzle.solution_81],
+    [phase, digitComplete, selectedIndex, cellReadOnly],
   );
 
   const toggleTechniqueSelectionForAuto = useCallback(
@@ -242,13 +216,12 @@ export function SudokuPlayClient({
   }, []);
 
   const applyTechniquesAuto = useCallback(() => {
-    if (phase !== "playing") return;
+    if (phase.kind !== "playing") return;
     const ids = Array.from(selectedTechniqueIdsForAuto);
     if (ids.length === 0) return;
 
-    const h = historyRef.current;
-    const { grid: nextGrid, steps } = runTechniqueAutoUntilNoChange(
-      h.present,
+    const { steps } = runTechniqueAutoUntilNoChange(
+      history.present,
       ids,
       puzzle.solution_81,
     );
@@ -258,15 +231,9 @@ export function SudokuPlayClient({
       return;
     }
 
-    let nh = h;
     for (const step of steps) {
-      nh = nh.recordNext(
-        step.grid,
-        step.techniqueId,
-        Array.from(new Set(step.cellIndex)),
-      );
+      dispatch({ type: "applyTechniqueStep", step });
     }
-    setHistory(nh);
 
     const highlighted = new Set<number>();
     for (const step of steps) {
@@ -274,93 +241,55 @@ export function SudokuPlayClient({
     }
     setTechniqueHighlightedCells(highlighted);
 
-    const initialValues = h.present.values();
-    const finalValues = nextGrid.values();
-    let mismatchCount = 0;
-    for (let i = 0; i < 81; i++) {
-      if (initialValues[i] === finalValues[i]) continue;
-      if (finalValues[i] === 0) continue;
-      const expected = Number(puzzle.solution_81[i] ?? 0);
-      if (finalValues[i] !== expected) mismatchCount += 1;
-    }
-    if (mismatchCount > 0) {
-      setMistakes((m) => m + mismatchCount);
-    }
-
-    const values = [...finalValues];
-    if (isBoardComplete(values)) {
-      setPhase("result");
-      setWon(isBoardMatchingSolution(values, puzzle.solution_81));
-    }
-
     setShowAutoRunList(false);
-  }, [phase, puzzle.solution_81, selectedTechniqueIdsForAuto]);
+  }, [phase, history, puzzle.solution_81, selectedTechniqueIdsForAuto]);
 
   const clearCell = useCallback(() => {
-    if (phase !== "playing") return;
+    if (phase.kind !== "playing") return;
     if (selectedIndex === null || cellReadOnly[selectedIndex]) return;
-    const i = selectedIndex;
-    const h = historyRef.current;
-    const nh = h.recordNext(h.present.clearCell(i), null, [i]);
-    setHistory(nh);
+    dispatch({ type: "clearCell", index: selectedIndex });
     setTechniqueHighlightedCells(null);
   }, [phase, selectedIndex, cellReadOnly]);
 
   const toggleMemoAtSelection = useCallback(
     (digit: number) => {
-      if (phase !== "playing") return;
+      if (phase.kind !== "playing") return;
       if (digit < 1 || digit > 9) return;
       if (selectedIndex === null || cellReadOnly[selectedIndex]) return;
-      const i = selectedIndex;
-      const h = historyRef.current;
-      if (h.present.cellAt(i).value !== 0) return;
-      const nh = h.recordNext(h.present.toggleMemo(i, digit), null, [i]);
-      setHistory(nh);
+      if (board.cellAt(selectedIndex).value !== 0) return;
+      dispatch({ type: "toggleMemo", index: selectedIndex, digit });
       setTechniqueHighlightedCells(null);
     },
-    [phase, selectedIndex, cellReadOnly],
+    [phase, selectedIndex, cellReadOnly, board],
   );
 
   const undo = useCallback(() => {
-    if (phase !== "playing" && phase !== "review") return;
-    const h = historyRef.current;
-    const changed = h.presentCellIndex;
-    const nh = h.undo();
-    setHistory(nh);
+    if (phase.kind !== "playing" && phase.kind !== "review") return;
+    const changed = history.presentCellIndex;
+    dispatch({ type: "undo" });
     setTechniqueHighlightedCells(changed ? new Set(changed) : null);
-  }, [phase]);
+  }, [phase, history]);
 
   const redo = useCallback(() => {
-    if (phase !== "playing" && phase !== "review") return;
-    const h = historyRef.current;
-    const nh = h.redo();
-    setHistory(nh);
+    if (phase.kind !== "playing" && phase.kind !== "review") return;
+    const nh = history.redo();
+    dispatch({ type: "redo" });
     setTechniqueHighlightedCells(
       nh.presentCellIndex ? new Set(nh.presentCellIndex) : null,
     );
-  }, [phase]);
+  }, [phase, history]);
 
   const startReplayFromResult = useCallback(() => {
-    let h = historyRef.current;
-    while (h.canUndo) {
-      h = h.undo();
-    }
-    setHistory(h);
+    dispatch({ type: "startReview" });
     setSelectedIndex(null);
     setTechniqueHighlightedCells(null);
     setShowAutoRunList(false);
-    setPhase("review");
   }, []);
 
   const exitReplayToResult = useCallback(() => {
-    let h = historyRef.current;
-    while (h.canRedo) {
-      h = h.redo();
-    }
-    setHistory(h);
+    dispatch({ type: "exitReview" });
     setSelectedIndex(null);
     setTechniqueHighlightedCells(null);
-    setPhase("result");
   }, []);
 
   const handleSelectIndex = useCallback((index: number) => {
@@ -373,7 +302,7 @@ export function SudokuPlayClient({
   }, []);
 
   useEffect(() => {
-    if (phase !== "playing") return;
+    if (phase.kind !== "playing") return;
     const onKeyDown = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey) return;
 
@@ -394,14 +323,14 @@ export function SudokuPlayClient({
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [phase, applyDigit, clearCell, toggleMemoAtSelection]);
 
-  if (phase === "result") {
+  if (phase.kind === "result") {
     return (
       <main className="mx-auto max-w-md px-4 py-12">
         <h1 className="text-2xl font-semibold text-zinc-900">
-          {won ? "クリア！" : "残念…"}
+          {phase.won ? "クリア！" : "残念…"}
         </h1>
         <p className="mt-4 text-zinc-600">
-          {won
+          {phase.won
             ? "すべてのマスが正解です。"
             : "マスはすべて埋まりましたが、どこかが正解と異なります。"}
         </p>
@@ -411,7 +340,7 @@ export function SudokuPlayClient({
           <span className="font-medium text-zinc-800">{mistakes}</span>
         </p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-          {won ? (
+          {phase.won ? (
             <button
               type="button"
               onClick={startReplayFromResult}
@@ -438,7 +367,7 @@ export function SudokuPlayClient({
     );
   }
 
-  if (phase === "review") {
+  if (phase.kind === "review") {
     return (
       <main className="mx-auto max-w-2xl px-4 py-8">
         <div className="mb-4 max-w-md rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-950">
@@ -567,7 +496,7 @@ export function SudokuPlayClient({
           canClearCell={
             selectedIndex !== null &&
             !cellReadOnly[selectedIndex] &&
-            phase === "playing"
+            phase.kind === "playing"
           }
           onUndo={undo}
           onRedo={redo}
@@ -585,10 +514,10 @@ export function SudokuPlayClient({
           onSelectAllTechniqueSelections={selectAllTechniqueSelectionsForAuto}
           onAutoRunTechniques={applyTechniquesAuto}
           canAutoRunTechniques={
-            phase === "playing" && selectedTechniqueIdsForAuto.size > 0
+            phase.kind === "playing" && selectedTechniqueIdsForAuto.size > 0
           }
           techniqueButtons={techniqueButtons}
-          isPlaying={phase === "playing"}
+          isPlaying={phase.kind === "playing"}
           onFocusAnyControl={clearTechniqueHighlightOnFocus}
         />
       </div>

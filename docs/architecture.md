@@ -79,7 +79,7 @@ Next.js の `app/` は **ルーティングとページの入口**。データ�
 | `lib/workers/` | **問題生成**。Web Worker 本体とメインスレッド用の窓口、両者が共有する同期生成処理を置く。 |
 | `lib/services/` | **ユースケース**。`lib/storage/` と `lib/workers/` を組み合わせ、例外や失敗を捕捉して UI が扱いやすい結果に変換する。UI が `lib/storage/` / `lib/workers/` に触れる唯一の経路（問題の用意、在庫の裏補充、解きかけ進行の保存・復元）。 |
 | `lib/types/` | **型定義のみ**（`Puzzle` の形、アプリ内で共有する軽い型）。 |
-| `lib/models/` | **振る舞い付きのドメイン集約**（プレイ盤面・プレイ履歴・**論理 1 手テクニックの実行**など）。`puzzle_81` / `solution_81` 文字列に対する runner 一括実行の要約など、CLI と共有する表現もここに寄せる。 |
+| `lib/models/` | **振る舞い付きのドメイン集約**（プレイ盤面・プレイ履歴・**論理 1 手テクニックの実行**・**プレイ画面のドメイン状態を扱う reducer**など）。`puzzle_81` / `solution_81` 文字列に対する runner 一括実行の要約など、CLI と共有する表現もここに寄せる。 |
 | `lib/utils/` | **横断的な小さな純粋関数**（表示用の細切れ、入力検証のヘルパなど）。ドメインの本丸は `validates` に置く。 |
 | `lib/algorithms/` | **求解・列挙・一意解判定**（文字列盤）と、**テクニックごとの 1 手検出・適用指示**（`techniques/`、`SudokuGrid` 入力。交差・サブセット・**基本魚（fishNN）**・**スカイスクレーパー** など）。**難易度スコア**（解けた問題はテクニック別固定点の最大を基準に手数・多様性などを微加点して 50〜100、**未解決は 100 + 残り空マスで 100〜181**）もここに置く。CLI / `lib/workers/` / `lib/models` の窓口から再利用する。 |
 | `lib/validates/` | **ナンプレのルール・盤面のパース・正誤判定**など、React / `fetch` に依存しない純粋ロジック。 |
@@ -116,6 +116,7 @@ DB は無い。問題の形は `lib/types/puzzle.ts` の `Puzzle` 型のみ。
 
 ## 更新履歴
 
+- 2026-09-23: プレイ画面（`SudokuPlayClient`）のドメイン状態（history / mistakes / phase / playback ロック）を React 非依存の reducer（`lib/models/play_session.ts` の `playSessionReducer`）へ移した（純粋リファクタ、挙動は変えない）。UI は `useReducer` でこれを呼び、`selectedIndex` 等の画面専用 state のみ引き続き `useState` で持つ。
 - 2026-09-23: プレイ画面「自動実行」のテクニック選択チェックボックスを localStorage（`nanpure:settings:v1`, `lib/storage/play_settings.ts`）に保存し、リロード後も復元する。UI からの読み書きは `lib/services/auto_run_settings.ts` 経由。
 - 2026-09-21: レイヤー規則と実装の食い違いを解消。UI が `lib/storage/` / `lib/workers/` を直接 import していた箇所（在庫の裏補充、解きかけ進行の保存・復元）を `lib/services/` に移し、`eslint.config.mjs` の `no-restricted-imports` で向きを強制。テクニック関数は 2026-03-30 の記述（DTO、Grid 非依存）と違い当初から `SudokuGrid` を受け取っているため、実装を正としてレイヤー表・ディレクトリ表を直した（`lib/algorithms/techniques/` ↔ `lib/models/` の相互依存だけを許す）。`AGENTS.md` の Supabase 前提の記述も同時に更新。
 - 2026-09-20: Supabase を全廃止。問題の生成・保存はブラウザ内で完結する（`lib/workers/` で生成、`lib/storage/` で localStorage への在庫・進行保存）。プレイの正規 URL を `/play/[id]` から `/play/` + `?p=<puzzle_81>` に変更（`generateStaticParams()` で id を列挙できないため）。`lib/supabase/` `lib/repositories/` `supabase/migrations/` と DB 投入系 CLI（`create-puzzle` 等）を削除し、`lib/types/puzzle.ts` の `PuzzleRow` を `Puzzle`（`puzzle_81` / `solution_81` / `level` のみ）に置き換え。`next.config.ts` を `output: "export"` の静的サイトにし、GitHub Pages へデプロイする（`.github/workflows/deploy.yml`）。
