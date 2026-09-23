@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 
 import { ControlPad } from "@/components/nanpure/ControlPad";
+import { DifficultySelect } from "@/components/nanpure/DifficultySelect";
 import { PlayResultPanel } from "@/components/nanpure/PlayResultPanel";
 import { CELL_SIZE_EXPR, SudokuBoard } from "@/components/nanpure/SudokuBoard";
 import { useTechniquePlayback } from "@/components/nanpure/useTechniquePlayback";
@@ -27,7 +28,7 @@ import {
   loadSavedPlay,
   savePlay,
 } from "@/lib/services/saved_play_progress";
-import type { Puzzle } from "@/lib/types/puzzle";
+import type { DifficultyPercent, Puzzle } from "@/lib/types/puzzle";
 import {
   TECHNIQUE_LABELS,
   TechniqueId,
@@ -48,9 +49,20 @@ function prefersReducedMotion(): boolean {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 }
 
-function PuzzleDifficultyLine({ level }: { level: number }) {
+function PuzzleDifficultyLine({
+  level,
+  sharedDifficultyPercent,
+}: {
+  level: number;
+  sharedDifficultyPercent?: DifficultyPercent | null;
+}) {
   return (
-    <p className="mt-1 text-sm tabular-nums text-zinc-600">Level: {level}</p>
+    <p className="mt-1 flex items-baseline gap-1.5 text-sm tabular-nums text-zinc-600">
+      <span>Level: {level}</span>
+      {sharedDifficultyPercent != null ? (
+        <span className="text-xs text-zinc-400">{sharedDifficultyPercent}%</span>
+      ) : null}
+    </p>
   );
 }
 
@@ -104,9 +116,13 @@ function initialAutoRunTechniqueSelection(): ReadonlySet<TechniqueId> {
 export function SudokuPlayClient({
   puzzle,
   onRequestNewPuzzle,
+  difficultyPercent,
+  onChangeDifficulty,
 }: {
   puzzle: SudokuPlayPuzzle;
   onRequestNewPuzzle: () => void;
+  difficultyPercent: DifficultyPercent;
+  onChangeDifficulty: (percent: DifficultyPercent) => void;
 }) {
   const { values: seedValues, fixed } = useMemo(
     () => parsePuzzle81(puzzle.puzzle_81),
@@ -516,10 +532,23 @@ export function SudokuPlayClient({
       <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-xl font-semibold text-zinc-900">ナンプレ</h1>
-          <PuzzleDifficultyLine level={puzzle.level} />
+          <PuzzleDifficultyLine
+            level={puzzle.level}
+            sharedDifficultyPercent={
+              puzzle.difficultyPercent !== difficultyPercent
+                ? puzzle.difficultyPercent
+                : null
+            }
+          />
         </div>
         <div className="text-right text-sm text-zinc-600">
-          <p>
+          <div className="flex justify-end">
+            <DifficultySelect
+              value={difficultyPercent}
+              onChange={onChangeDifficulty}
+            />
+          </div>
+          <p className="mt-2">
             ミス:{" "}
             <span className="font-semibold text-zinc-900">{mistakes}</span>
           </p>

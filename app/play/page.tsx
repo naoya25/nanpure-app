@@ -3,11 +3,15 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
+import { DifficultySelect } from "@/components/nanpure/DifficultySelect";
 import { SudokuPlayClient } from "@/components/nanpure/SudokuPlayClient";
+import {
+  loadDifficultyPercent,
+  saveDifficultyPercent,
+} from "@/lib/services/difficulty_settings";
 import { preparePuzzleForPlay } from "@/lib/services/prepare_puzzle_for_play";
 import { replenishPuzzleStockInBackground } from "@/lib/services/replenish_puzzle_stock";
-import { DEFAULT_DIFFICULTY_PERCENT } from "@/lib/types/puzzle";
-import type { Puzzle } from "@/lib/types/puzzle";
+import type { DifficultyPercent, Puzzle } from "@/lib/types/puzzle";
 
 const PAGE_TITLE = "プレイ(問題を選ぶ) | ナンプレトレーニング";
 
@@ -32,20 +36,29 @@ function replaceSharedPuzzleInUrl(puzzle81: string | null): void {
 
 export default function PlayPage() {
   const [state, setState] = useState<PlayPageState>({ status: "loading" });
+  const [difficultyPercent, setDifficultyPercent] = useState<DifficultyPercent>(
+    () => loadDifficultyPercent(),
+  );
   const startedRef = useRef(false);
 
-  const start = useCallback((sharedPuzzle81: string | null) => {
-    void (async () => {
-      const result = await preparePuzzleForPlay(sharedPuzzle81, DEFAULT_DIFFICULTY_PERCENT);
-      if (result.outcome !== "ok") {
-        setState({ status: "error", kind: result.outcome });
-        return;
-      }
-      replaceSharedPuzzleInUrl(result.puzzle.puzzle_81);
-      setState({ status: "ready", ...result.puzzle });
-      replenishPuzzleStockInBackground(DEFAULT_DIFFICULTY_PERCENT);
-    })();
-  }, []);
+  const start = useCallback(
+    (sharedPuzzle81: string | null, targetDifficultyPercent: DifficultyPercent) => {
+      void (async () => {
+        const result = await preparePuzzleForPlay(
+          sharedPuzzle81,
+          targetDifficultyPercent,
+        );
+        if (result.outcome !== "ok") {
+          setState({ status: "error", kind: result.outcome });
+          return;
+        }
+        replaceSharedPuzzleInUrl(result.puzzle.puzzle_81);
+        setState({ status: "ready", ...result.puzzle });
+        replenishPuzzleStockInBackground(targetDifficultyPercent);
+      })();
+    },
+    [],
+  );
 
   useEffect(() => {
     document.title = PAGE_TITLE;
@@ -54,14 +67,25 @@ export default function PlayPage() {
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
-    start(readSharedPuzzleFromLocation());
-  }, [start]);
+    start(readSharedPuzzleFromLocation(), difficultyPercent);
+  }, [start, difficultyPercent]);
 
   const retryWithRandomPuzzle = useCallback(() => {
     setState({ status: "loading" });
     replaceSharedPuzzleInUrl(null);
-    start(null);
-  }, [start]);
+    start(null, difficultyPercent);
+  }, [start, difficultyPercent]);
+
+  const changeDifficulty = useCallback(
+    (percent: DifficultyPercent) => {
+      saveDifficultyPercent(percent);
+      setDifficultyPercent(percent);
+      setState({ status: "loading" });
+      replaceSharedPuzzleInUrl(null);
+      start(null, percent);
+    },
+    [start],
+  );
 
   if (state.status === "loading") {
     return (
@@ -85,7 +109,7 @@ export default function PlayPage() {
             ? "この URL の問題は開けませんでした。"
             : "問題の生成に失敗しました。しばらくしてからもう一度お試しください。"}
         </p>
-        <div className="flex flex-wrap gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button
             type="button"
             onClick={retryWithRandomPuzzle}
@@ -99,6 +123,7 @@ export default function PlayPage() {
           >
             トップへ
           </Link>
+          <DifficultySelect value={difficultyPercent} onChange={changeDifficulty} />
         </div>
       </main>
     );
@@ -108,6 +133,8 @@ export default function PlayPage() {
     <SudokuPlayClient
       key={state.puzzle_81}
       onRequestNewPuzzle={retryWithRandomPuzzle}
+      difficultyPercent={difficultyPercent}
+      onChangeDifficulty={changeDifficulty}
       puzzle={{
         puzzle_81: state.puzzle_81,
         solution_81: state.solution_81,
