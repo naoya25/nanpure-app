@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 
 import { ControlPad } from "@/components/nanpure/ControlPad";
-import { DifficultySelect } from "@/components/nanpure/DifficultySelect";
 import { PlayResultPanel } from "@/components/nanpure/PlayResultPanel";
 import { CELL_SIZE_EXPR, SudokuBoard } from "@/components/nanpure/SudokuBoard";
 import { useTechniquePlayback } from "@/components/nanpure/useTechniquePlayback";
@@ -51,17 +50,15 @@ function prefersReducedMotion(): boolean {
 
 function PuzzleDifficultyLine({
   level,
-  sharedDifficultyPercent,
+  difficultyPercent,
 }: {
   level: number;
-  sharedDifficultyPercent?: DifficultyPercent | null;
+  difficultyPercent: DifficultyPercent;
 }) {
   return (
     <p className="mt-1 flex items-baseline gap-1.5 text-sm tabular-nums text-zinc-600">
       <span>Level: {level}</span>
-      {sharedDifficultyPercent != null ? (
-        <span className="text-xs text-zinc-400">{sharedDifficultyPercent}%</span>
-      ) : null}
+      <span className="text-xs text-zinc-400">難易度 {difficultyPercent}%</span>
     </p>
   );
 }
@@ -116,13 +113,9 @@ function initialAutoRunTechniqueSelection(): ReadonlySet<TechniqueId> {
 export function SudokuPlayClient({
   puzzle,
   onRequestNewPuzzle,
-  difficultyPercent,
-  onChangeDifficulty,
 }: {
   puzzle: SudokuPlayPuzzle;
   onRequestNewPuzzle: () => void;
-  difficultyPercent: DifficultyPercent;
-  onChangeDifficulty: (percent: DifficultyPercent) => void;
 }) {
   const { values: seedValues, fixed } = useMemo(
     () => parsePuzzle81(puzzle.puzzle_81),
@@ -464,7 +457,10 @@ export function SudokuPlayClient({
         <div className="mb-6 flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-xl font-semibold text-zinc-900">ナンプレ</h1>
-            <PuzzleDifficultyLine level={puzzle.level} />
+            <PuzzleDifficultyLine
+              level={puzzle.level}
+              difficultyPercent={puzzle.difficultyPercent}
+            />
           </div>
           <div className="flex flex-col items-end gap-2 text-right text-sm">
             <button
@@ -534,21 +530,11 @@ export function SudokuPlayClient({
           <h1 className="text-xl font-semibold text-zinc-900">ナンプレ</h1>
           <PuzzleDifficultyLine
             level={puzzle.level}
-            sharedDifficultyPercent={
-              puzzle.difficultyPercent !== difficultyPercent
-                ? puzzle.difficultyPercent
-                : null
-            }
+            difficultyPercent={puzzle.difficultyPercent}
           />
         </div>
         <div className="text-right text-sm text-zinc-600">
-          <div className="flex justify-end">
-            <DifficultySelect
-              value={difficultyPercent}
-              onChange={onChangeDifficulty}
-            />
-          </div>
-          <p className="mt-2">
+          <p>
             ミス:{" "}
             <span className="font-semibold text-zinc-900">{mistakes}</span>
           </p>

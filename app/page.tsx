@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { DIFFICULTY_PERCENTS } from "@/lib/types/puzzle";
+
 export default function Home() {
   return (
     <main className="relative isolate min-h-full overflow-hidden">
@@ -30,13 +32,25 @@ export default function Home() {
           ナンプレの<strong className="font-semibold text-zinc-800">解法テクニック</strong>
           を学び、盤上で試すためのアプリです。問題に取り組みながら、論理の手筋を少しずつ身につけられます。
         </p>
-        <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
-          <Link
-            href="/play"
-            className="inline-flex h-11 items-center justify-center rounded-full bg-zinc-900 px-7 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-800"
-          >
-            練習を始める
-          </Link>
+        <div className="mt-10 flex flex-col gap-3">
+          <p className="text-xs font-medium text-zinc-500">
+            難易度を選んで始める
+          </p>
+          <div className="flex flex-wrap gap-3">
+            {DIFFICULTY_PERCENTS.map((percent) => (
+              <Link
+                key={percent}
+                href={`/play/?d=${percent}`}
+                className={
+                  percent === 100
+                    ? "inline-flex h-11 items-center justify-center rounded-full bg-zinc-900 px-7 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-zinc-800"
+                    : "inline-flex h-11 items-center justify-center rounded-full border border-zinc-300 bg-white px-7 text-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50"
+                }
+              >
+                {percent}%
+              </Link>
+            ))}
+          </div>
           <Link
             href="/create"
             className="inline-flex h-11 items-center justify-center rounded-full border border-zinc-300 bg-white px-7 text-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50"

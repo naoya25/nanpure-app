@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { DifficultySelect } from "@/components/nanpure/DifficultySelect";
 import { SudokuPlayClient } from "@/components/nanpure/SudokuPlayClient";
 import {
   loadDifficultyPercent,
@@ -11,6 +10,7 @@ import {
 } from "@/lib/services/difficulty_settings";
 import { preparePuzzleForPlay } from "@/lib/services/prepare_puzzle_for_play";
 import { replenishPuzzleStockInBackground } from "@/lib/services/replenish_puzzle_stock";
+import { isDifficultyPercent } from "@/lib/types/puzzle";
 import type { DifficultyPercent, Puzzle } from "@/lib/types/puzzle";
 
 const PAGE_TITLE = "プレイ(問題を選ぶ) | ナンプレトレーニング";
@@ -24,6 +24,18 @@ function readSharedPuzzleFromLocation(): string | null {
   return new URLSearchParams(window.location.search).get("p");
 }
 
+function readDifficultyFromLocation(): DifficultyPercent | null {
+  const raw = new URLSearchParams(window.location.search).get("d");
+  const percent = Number(raw);
+  return isDifficultyPercent(percent) ? percent : null;
+}
+
+function initialDifficultyPercent(): DifficultyPercent {
+  if (typeof window === "undefined") return loadDifficultyPercent();
+  if (readSharedPuzzleFromLocation()) return loadDifficultyPercent();
+  return readDifficultyFromLocation() ?? loadDifficultyPercent();
+}
+
 function replaceSharedPuzzleInUrl(puzzle81: string | null): void {
   const url = new URL(window.location.href);
   if (puzzle81) {
@@ -31,13 +43,14 @@ function replaceSharedPuzzleInUrl(puzzle81: string | null): void {
   } else {
     url.searchParams.delete("p");
   }
+  url.searchParams.delete("d");
   window.history.replaceState(null, "", url);
 }
 
 export default function PlayPage() {
   const [state, setState] = useState<PlayPageState>({ status: "loading" });
-  const [difficultyPercent, setDifficultyPercent] = useState<DifficultyPercent>(
-    () => loadDifficultyPercent(),
+  const [difficultyPercent] = useState<DifficultyPercent>(
+    () => initialDifficultyPercent(),
   );
   const startedRef = useRef(false);
 
@@ -67,7 +80,12 @@ export default function PlayPage() {
   useEffect(() => {
     if (startedRef.current) return;
     startedRef.current = true;
-    start(readSharedPuzzleFromLocation(), difficultyPercent);
+    const sharedPuzzle81 = readSharedPuzzleFromLocation();
+    if (!sharedPuzzle81) {
+      const fromUrl = readDifficultyFromLocation();
+      if (fromUrl !== null) saveDifficultyPercent(fromUrl);
+    }
+    start(sharedPuzzle81, difficultyPercent);
   }, [start, difficultyPercent]);
 
   const retryWithRandomPuzzle = useCallback(() => {
@@ -75,17 +93,6 @@ export default function PlayPage() {
     replaceSharedPuzzleInUrl(null);
     start(null, difficultyPercent);
   }, [start, difficultyPercent]);
-
-  const changeDifficulty = useCallback(
-    (percent: DifficultyPercent) => {
-      saveDifficultyPercent(percent);
-      setDifficultyPercent(percent);
-      setState({ status: "loading" });
-      replaceSharedPuzzleInUrl(null);
-      start(null, percent);
-    },
-    [start],
-  );
 
   if (state.status === "loading") {
     return (
@@ -123,7 +130,6 @@ export default function PlayPage() {
           >
             トップへ
           </Link>
-          <DifficultySelect value={difficultyPercent} onChange={changeDifficulty} />
         </div>
       </main>
     );
@@ -133,8 +139,6 @@ export default function PlayPage() {
     <SudokuPlayClient
       key={state.puzzle_81}
       onRequestNewPuzzle={retryWithRandomPuzzle}
-      difficultyPercent={difficultyPercent}
-      onChangeDifficulty={changeDifficulty}
       puzzle={{
         puzzle_81: state.puzzle_81,
         solution_81: state.solution_81,
