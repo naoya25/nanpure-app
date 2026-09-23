@@ -2,7 +2,8 @@ import { computeSudokuDifficultyScore } from "@/lib/algorithms/sudoku_difficulty
 import { sudokuSolutionCountKind } from "@/lib/algorithms/sudoku_solver";
 import { summarizeTechniqueAutoRunFromStrings } from "@/lib/models/puzzle_technique_run_analysis";
 import { takeOne } from "@/lib/storage/puzzle_stock";
-import type { Puzzle } from "@/lib/types/puzzle";
+import { DEFAULT_DIFFICULTY_PERCENT } from "@/lib/types/puzzle";
+import type { DifficultyPercent, Puzzle } from "@/lib/types/puzzle";
 import { clampScoreToPuzzleLevel } from "@/lib/utils/puzzle_level";
 import { requestGeneratedPuzzle } from "@/lib/workers/generate_puzzle_client";
 
@@ -32,24 +33,26 @@ function resolveSharedPuzzle(puzzle81: string): PreparePuzzleForPlayResult {
       puzzle_81: puzzle81,
       solution_81: kind.solution81,
       level: levelForSolvedPuzzle(puzzle81, kind.solution81),
+      difficultyPercent: DEFAULT_DIFFICULTY_PERCENT,
     },
   };
 }
 
 export async function preparePuzzleForPlay(
   sharedPuzzle81: string | null,
+  difficultyPercent: DifficultyPercent,
 ): Promise<PreparePuzzleForPlayResult> {
   if (sharedPuzzle81) {
     return resolveSharedPuzzle(sharedPuzzle81);
   }
 
-  const stocked = takeOne();
+  const stocked = takeOne(difficultyPercent);
   if (stocked) {
     return { outcome: "ok", puzzle: stocked };
   }
 
   try {
-    const generated = await requestGeneratedPuzzle();
+    const generated = await requestGeneratedPuzzle(difficultyPercent);
     return { outcome: "ok", puzzle: generated };
   } catch {
     return { outcome: "generation_failed" };

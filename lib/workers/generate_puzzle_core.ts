@@ -1,7 +1,8 @@
 import { generateSudokuPuzzlePair } from "@/lib/algorithms/generate_sudoku";
 import { computeSudokuDifficultyScore } from "@/lib/algorithms/sudoku_difficulty_score";
 import { summarizeTechniqueAutoRunFromStrings } from "@/lib/models/puzzle_technique_run_analysis";
-import type { Puzzle } from "@/lib/types/puzzle";
+import { DEFAULT_DIFFICULTY_PERCENT } from "@/lib/types/puzzle";
+import type { DifficultyPercent, Puzzle } from "@/lib/types/puzzle";
 import { clampScoreToPuzzleLevel } from "@/lib/utils/puzzle_level";
 
 const MAX_GENERATE_ATTEMPTS = 50;
@@ -11,10 +12,13 @@ const MAX_GENERATE_ATTEMPTS = 50;
  * 実測で中央値 約300ms・最大 2283ms かかるため、呼び出し側は Worker に逃がすこと
  * （`generate_puzzle_client.ts`）。Worker が使えない環境のフォールバックでも同じ関数を使う。
  */
-export function generatePuzzleSync(random: () => number = Math.random): Puzzle | null {
+export function generatePuzzleSync(
+  random: () => number = Math.random,
+  difficultyPercent: DifficultyPercent = DEFAULT_DIFFICULTY_PERCENT,
+): Puzzle | null {
   let pair = null;
   for (let attempt = 0; attempt < MAX_GENERATE_ATTEMPTS && pair === null; attempt++) {
-    pair = generateSudokuPuzzlePair(random);
+    pair = generateSudokuPuzzlePair(random, difficultyPercent);
   }
   if (pair === null) return null;
 
@@ -26,5 +30,5 @@ export function generatePuzzleSync(random: () => number = Math.random): Puzzle |
   });
   const level = clampScoreToPuzzleLevel(score.difficultyScore100);
 
-  return { puzzle_81: pair.puzzle_81, solution_81: pair.solution_81, level };
+  return { puzzle_81: pair.puzzle_81, solution_81: pair.solution_81, level, difficultyPercent };
 }

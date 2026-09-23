@@ -1,12 +1,15 @@
 import { getLocalStorageItem, setLocalStorageItem } from "@/lib/storage/local_storage";
-import type { Puzzle } from "@/lib/types/puzzle";
+import { isDifficultyPercent } from "@/lib/types/puzzle";
+import type { DifficultyPercent, Puzzle } from "@/lib/types/puzzle";
+import { SUDOKU_CELLS } from "@/lib/validates/grid";
 
-const STOCK_KEY = "nanpure:stock:v1";
+const STOCK_KEY = "nanpure:stock:v2";
 
+/** 難易度ごとの目標在庫数 */
 export const PUZZLE_STOCK_TARGET_SIZE = 3;
 
-type PuzzleStockStateV1 = {
-  v: 1;
+type PuzzleStockStateV2 = {
+  v: 2;
   items: Puzzle[];
 };
 
@@ -15,16 +18,19 @@ function isPuzzle(value: unknown): value is Puzzle {
   const v = value as Record<string, unknown>;
   return (
     typeof v.puzzle_81 === "string" &&
+    v.puzzle_81.length === SUDOKU_CELLS &&
     typeof v.solution_81 === "string" &&
-    typeof v.level === "number"
+    v.solution_81.length === SUDOKU_CELLS &&
+    typeof v.level === "number" &&
+    isDifficultyPercent(v.difficultyPercent)
   );
 }
 
-function emptyState(): PuzzleStockStateV1 {
-  return { v: 1, items: [] };
+function emptyState(): PuzzleStockStateV2 {
+  return { v: 2, items: [] };
 }
 
-function readState(): PuzzleStockStateV1 {
+function readState(): PuzzleStockStateV2 {
   const raw = getLocalStorageItem(STOCK_KEY);
   if (raw === null) return emptyState();
 
@@ -33,13 +39,13 @@ function readState(): PuzzleStockStateV1 {
     if (
       typeof parsed !== "object" ||
       parsed === null ||
-      (parsed as { v?: unknown }).v !== 1 ||
+      (parsed as { v?: unknown }).v !== 2 ||
       !Array.isArray((parsed as { items?: unknown }).items)
     ) {
       return emptyState();
     }
     return {
-      v: 1,
+      v: 2,
       items: (parsed as { items: unknown[] }).items.filter(isPuzzle),
     };
   } catch {
@@ -47,23 +53,26 @@ function readState(): PuzzleStockStateV1 {
   }
 }
 
-function writeState(state: PuzzleStockStateV1): void {
+function writeState(state: PuzzleStockStateV2): void {
   setLocalStorageItem(STOCK_KEY, JSON.stringify(state));
 }
 
-export function takeOne(): Puzzle | null {
+export function takeOne(difficultyPercent: DifficultyPercent): Puzzle | null {
   const state = readState();
-  const [first, ...rest] = state.items;
-  if (first === undefined) return null;
-  writeState({ v: 1, items: rest });
-  return first;
+  const index = state.items.findIndex((item) => item.difficultyPercent === difficultyPercent);
+  if (index === -1) return null;
+
+  const item = state.items[index]!;
+  const rest = [...state.items.slice(0, index), ...state.items.slice(index + 1)];
+  writeState({ v: 2, items: rest });
+  return item;
 }
 
 export function push(item: Puzzle): void {
   const state = readState();
-  writeState({ v: 1, items: [...state.items, item] });
+  writeState({ v: 2, items: [...state.items, item] });
 }
 
-export function stockCount(): number {
-  return readState().items.length;
+export function stockCount(difficultyPercent: DifficultyPercent): number {
+  return readState().items.filter((item) => item.difficultyPercent === difficultyPercent).length;
 }

@@ -3,6 +3,8 @@ import {
   sudokuEnumerateSolutions,
   sudokuSolutionCountKind,
 } from "@/lib/algorithms/sudoku_solver";
+import { DEFAULT_DIFFICULTY_PERCENT } from "@/lib/types/puzzle";
+import type { DifficultyPercent } from "@/lib/types/puzzle";
 
 const DIGITS_1_9 = ["1", "2", "3", "4", "5", "6", "7", "8", "9"] as const;
 
@@ -97,11 +99,42 @@ export type GeneratedSudokuPair = {
 };
 
 /**
- * 対角ブロックシード → 完成形を 1 通り求める → 一意解を保つよう穴あけ。
- * シードが解けない場合は `null`（通常は起きにくい）。
+ * `puzzle81` の穴（`"0"`）のうち `Math.round(穴の数 * ratio)` 個だけ残し、
+ * 残りを `solution81` の数字で埋め戻す。`ratio` は (0, 1]。`ratio === 1` なら
+ * `puzzle81` をそのまま返す。埋め戻すだけなので一意解は保たれる。
+ */
+export function refillHolesToRatio(
+  puzzle81: string,
+  solution81: string,
+  ratio: number,
+  random: () => number = Math.random,
+): string {
+  if (ratio <= 0 || ratio > 1) {
+    throw new Error(`refillHolesToRatio expects ratio in (0, 1], got ${ratio}`);
+  }
+  if (ratio === 1) return puzzle81;
+
+  const holeIndexes: number[] = [];
+  for (let i = 0; i < puzzle81.length; i++) {
+    if (puzzle81[i] === "0") holeIndexes.push(i);
+  }
+  shuffleArrayInPlace(holeIndexes, random);
+
+  const keepCount = Math.round(holeIndexes.length * ratio);
+  const chars = puzzle81.split("");
+  for (const i of holeIndexes.slice(keepCount)) {
+    chars[i] = solution81[i]!;
+  }
+  return chars.join("");
+}
+
+/**
+ * 対角ブロックシード → 完成形を 1 通り求める → 一意解を保つよう穴あけ →
+ * `difficultyPercent` に応じて穴を埋め戻す。シードが解けない場合は `null`（通常は起きにくい）。
  */
 export function generateSudokuPuzzlePair(
   random: () => number = Math.random,
+  difficultyPercent: DifficultyPercent = DEFAULT_DIFFICULTY_PERCENT,
 ): GeneratedSudokuPair | null {
   const seed = createSudokuDiagonalBlocksSeed(random);
   const solved = sudokuEnumerateSolutions(seed, 1);
@@ -110,7 +143,8 @@ export function generateSudokuPuzzlePair(
   }
 
   const solution_81 = solved[0]!;
-  const puzzle_81 = reduceSudokuPuzzleByUniqueness(solution_81, random);
+  const reduced_81 = reduceSudokuPuzzleByUniqueness(solution_81, random);
+  const puzzle_81 = refillHolesToRatio(reduced_81, solution_81, difficultyPercent / 100, random);
 
   const verify = sudokuSolutionCountKind(puzzle_81);
   if (verify.kind !== "unique" || verify.solution81 !== solution_81) {

@@ -14,5 +14,12 @@ export function loadAutoRunTechniqueIds(): ReadonlySet<TechniqueId> | null {
 }
 
 export function saveAutoRunTechniqueIds(ids: ReadonlySet<TechniqueId>): void {
-  savePlaySettings({ v: 1, autoRunTechniqueIds: Array.from(ids) });
+  const settings = loadPlaySettings();
+  savePlaySettings({
+    v: 1,
+    autoRunTechniqueIds: Array.from(ids),
+    ...(settings?.difficultyPercent === undefined
+      ? {}
+      : { difficultyPercent: settings.difficultyPercent }),
+  });
 }

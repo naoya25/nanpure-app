@@ -1,3 +1,4 @@
+import { DEFAULT_DIFFICULTY_PERCENT, isDifficultyPercent } from "@/lib/types/puzzle";
 import type { Puzzle } from "@/lib/types/puzzle";
 import { generatePuzzleSync } from "@/lib/workers/generate_puzzle_core";
 
@@ -21,6 +22,11 @@ type DedicatedWorkerMessageScope = {
 
 const workerScope = self as unknown as DedicatedWorkerMessageScope;
 
-workerScope.onmessage = () => {
-  workerScope.postMessage(generatePuzzleSync());
+workerScope.onmessage = (event) => {
+  const requested = (event.data as { difficultyPercent?: unknown } | null | undefined)
+    ?.difficultyPercent;
+  const difficultyPercent = isDifficultyPercent(requested)
+    ? requested
+    : DEFAULT_DIFFICULTY_PERCENT;
+  workerScope.postMessage(generatePuzzleSync(Math.random, difficultyPercent));
 };

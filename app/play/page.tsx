@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { SudokuPlayClient } from "@/components/nanpure/SudokuPlayClient";
 import { preparePuzzleForPlay } from "@/lib/services/prepare_puzzle_for_play";
 import { replenishPuzzleStockInBackground } from "@/lib/services/replenish_puzzle_stock";
+import { DEFAULT_DIFFICULTY_PERCENT } from "@/lib/types/puzzle";
 import type { Puzzle } from "@/lib/types/puzzle";
 
 const PAGE_TITLE = "プレイ(問題を選ぶ) | ナンプレトレーニング";
@@ -35,14 +36,14 @@ export default function PlayPage() {
 
   const start = useCallback((sharedPuzzle81: string | null) => {
     void (async () => {
-      const result = await preparePuzzleForPlay(sharedPuzzle81);
+      const result = await preparePuzzleForPlay(sharedPuzzle81, DEFAULT_DIFFICULTY_PERCENT);
       if (result.outcome !== "ok") {
         setState({ status: "error", kind: result.outcome });
         return;
       }
       replaceSharedPuzzleInUrl(result.puzzle.puzzle_81);
       setState({ status: "ready", ...result.puzzle });
-      replenishPuzzleStockInBackground();
+      replenishPuzzleStockInBackground(DEFAULT_DIFFICULTY_PERCENT);
     })();
   }, []);
 
@@ -111,6 +112,7 @@ export default function PlayPage() {
         puzzle_81: state.puzzle_81,
         solution_81: state.solution_81,
         level: state.level,
+        difficultyPercent: state.difficultyPercent,
       }}
     />
   );

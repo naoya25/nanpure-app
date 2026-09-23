@@ -5,6 +5,7 @@ const SETTINGS_KEY = "nanpure:settings:v1";
 export type PlaySettingsV1 = {
   v: 1;
   autoRunTechniqueIds: string[];
+  difficultyPercent?: number;
 };
 
 function isPlaySettingsV1(value: unknown): value is PlaySettingsV1 {
@@ -13,7 +14,8 @@ function isPlaySettingsV1(value: unknown): value is PlaySettingsV1 {
   return (
     v.v === 1 &&
     Array.isArray(v.autoRunTechniqueIds) &&
-    v.autoRunTechniqueIds.every((id) => typeof id === "string")
+    v.autoRunTechniqueIds.every((id) => typeof id === "string") &&
+    (v.difficultyPercent === undefined || typeof v.difficultyPercent === "number")
   );
 }
 

@@ -1,4 +1,5 @@
-import type { Puzzle } from "@/lib/types/puzzle";
+import { DEFAULT_DIFFICULTY_PERCENT } from "@/lib/types/puzzle";
+import type { DifficultyPercent, Puzzle } from "@/lib/types/puzzle";
 import { generatePuzzleSync } from "@/lib/workers/generate_puzzle_core";
 
 /**
@@ -11,7 +12,9 @@ const WORKER_TIMEOUT_MS = 15_000;
  * 生成を Worker に投げる。Worker を作れない・失敗した・時間内に返らない場合は
  * メインスレッドで同じ処理を走らせる（UI は数百ms〜数秒ブロックする）。
  */
-export function requestGeneratedPuzzle(): Promise<Puzzle> {
+export function requestGeneratedPuzzle(
+  difficultyPercent: DifficultyPercent = DEFAULT_DIFFICULTY_PERCENT,
+): Promise<Puzzle> {
   return new Promise((resolve, reject) => {
     let settled = false;
 
@@ -23,7 +26,7 @@ export function requestGeneratedPuzzle(): Promise<Puzzle> {
 
     const runFallback = () =>
       settle(() => {
-        const result = generatePuzzleSync();
+        const result = generatePuzzleSync(Math.random, difficultyPercent);
         if (result) resolve(result);
         else reject(new Error("generatePuzzleSync: failed after max attempts"));
       });
@@ -57,6 +60,6 @@ export function requestGeneratedPuzzle(): Promise<Puzzle> {
       runFallback();
     };
 
-    worker.postMessage(null);
+    worker.postMessage({ difficultyPercent });
   });
 }
