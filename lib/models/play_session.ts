@@ -4,6 +4,7 @@ import type { TechniqueAutoRunStep } from "@/lib/types/sudoku_technique_types";
 import {
   isBoardComplete,
   isBoardMatchingSolution,
+  isDigitCorrectForSolution,
   isEverySolutionCellForDigitFilled,
 } from "@/lib/validates/validate";
 
@@ -55,6 +56,17 @@ export function isCellReadOnly(state: PlaySessionState, index: number): boolean 
   if (state.config.fixed[index]) return true;
   const v = state.history.present.values()[index];
   return v >= 1 && v <= 9 && String(v) === state.config.solution81[index];
+}
+
+/** そのマスに `digit` を置くと解答と食い違うか（入力前の確認に使う） */
+export function isDigitMismatchingSolution(
+  state: PlaySessionState,
+  index: number,
+  digit: number,
+): boolean {
+  if (digit < 1 || digit > 9) return false;
+  if (index < 0 || index >= SUDOKU_CELLS) return false;
+  return !isDigitCorrectForSolution(digit, state.config.solution81, index);
 }
 
 export function isDigitComplete(state: PlaySessionState, digit: number): boolean {

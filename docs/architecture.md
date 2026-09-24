@@ -8,6 +8,7 @@ nanpure-app の構成・レイヤー・データの流れ・ディレクトリ�
 2. **表示**: `puzzle_81` を 9×9 盤面として表示する（`0` は空マス）。
 3. **操作**: 空マスに 1〜9 を入力・削除できる。`puzzle_81` で既に数字が与えられているマスは **固定**（編集不可）とする。
 4. **正誤**: ユーザーがマスに値を入れた **タイミング**で、そのマスの値を `solution_81` の同じインデックスと比較する。不一致なら **そのマスに紐づく警告**を出す（表示方法は UI 側で決める）。
+5. **入力前の確認**: 押し間違い対策として、**解答と違う数字を入れようとしたときだけ**確認を出す。やめればミス数は増えない（確認を出す判定は `lib/models/play_session.ts`、UI は `components/nanpure/`）。正誤そのものは入力時点でどのみち盤に出るため、この確認で新たに漏れる情報は無い。
 
 盤面の現在状態はクライアントの state で持ち、`solution_81` は取得後メモリ上で参照する（MVP）。アプリはサーバーを持たない完全な静的サイト（`output: "export"`）のため、不正対策を厳密にする必要が出た場合はクライアント側の強化かバックエンド再導入を検討する。
 
@@ -119,6 +120,7 @@ DB は無い。問題の形は `lib/types/puzzle.ts` の `Puzzle` 型のみ。
 
 ## 更新履歴
 
+- 2026-09-24: 押し間違い対策として、解答と違う数字を入力しようとしたときだけ確認ダイアログを出す（`components/nanpure/DigitConfirmDialog.tsx`）。判定は `lib/models/play_session.ts` の `isDigitMismatchingSolution()`（`lib/validates/validate.ts` の `isDigitCorrectForSolution()` を使う純粋なセレクタ）。「キャンセル」ならミス数は増えず盤も変わらない。ミス数は確認後だけ増えるため自己申告に近くなる。確認中のキーボードは Escape（キャンセル）だけ受け付ける。
 - 2026-09-23: テクニックを足しやすくするため、表示名を `TECHNIQUE_LABEL_BY_ID`（`Record<TechniqueId, string>`、書き忘れは型エラー）、画面の並びを `TECHNIQUE_DISPLAY_ORDER` に分け、runner・レベル算出・統計が使う全 ID を `ALL_TECHNIQUE_IDS`（適用順）に一本化した（`lib/types/sudoku_technique_types.ts`）。画面の並びが全 ID を含むこと・仮置きが適用順の末尾であることは `tests/types/` で固定。`scripts/experiment-technique-stats.ts` に、仮置き直前の盤面を書き出す `--dump-trial-boards` を追加。追加手順は `docs/sudoku-techniques.md` に置いた。
 - 2026-09-23: 最後の手段として仮置き（`TRIAL_AND_ERROR`、`lib/algorithms/techniques/trial_and_error.ts`）を追加し、適用順の末尾に置いた。候補を 1 つ仮に置いてシングル・隠れシングルだけで進め、矛盾したらその候補を削除する（1 段だけ）。seed 20260923 の 1000 問では仮置き以外で 62 問が詰まり、仮置きを足すと全問解けた。全 27 ユニットのマス index は `helper.ts` の `SUDOKU_UNITS` に置いた。難易度の固定点は 90（AIC の 84 より上）。
 - 2026-09-23: クリア時に `SudokuBoard` の `celebrate` prop（`app/globals.css` の `cell-celebrate` keyframes）で盤を光らせる演出を追加し、結果画面に `PlayHistory.techniqueUsageOnCurrentPath()`（`past` + `presentEntry` 集計、undo で捨てた手は含まない）で集計した使用テクニック一覧を表示する。結果画面 JSX は `components/nanpure/PlayResultPanel.tsx` に切り出した。

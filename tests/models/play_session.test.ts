@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { PlayHistory } from "@/lib/models/play_history";
 import {
   createPlaySession,
+  isDigitMismatchingSolution,
   playSessionReducer,
   type PlaySessionConfig,
   type PlaySessionState,
@@ -248,5 +249,33 @@ describe("playSessionReducer", () => {
     expect(backToResult.history.present.values()).toEqual(
       solved.history.present.values(),
     );
+  });
+});
+
+describe("isDigitMismatchingSolution", () => {
+  const manyEmptyCase = SOLVER_CASES[1]!;
+  const state = createSessionFromCase(
+    manyEmptyCase.puzzle81,
+    manyEmptyCase.solution81,
+  );
+  const [index] = emptyIndices(state);
+  const correctDigit = Number(manyEmptyCase.solution81[index]);
+
+  it("解答と同じ数字は false（確認を出さない）", () => {
+    expect(isDigitMismatchingSolution(state, index, correctDigit)).toBe(false);
+  });
+
+  it("解答と違う数字は true（確認を出す）", () => {
+    for (let digit = 1; digit <= 9; digit++) {
+      if (digit === correctDigit) continue;
+      expect(isDigitMismatchingSolution(state, index, digit)).toBe(true);
+    }
+  });
+
+  it("範囲外の数字・マスは false", () => {
+    expect(isDigitMismatchingSolution(state, index, 0)).toBe(false);
+    expect(isDigitMismatchingSolution(state, index, 10)).toBe(false);
+    expect(isDigitMismatchingSolution(state, -1, correctDigit)).toBe(false);
+    expect(isDigitMismatchingSolution(state, 81, correctDigit)).toBe(false);
   });
 });

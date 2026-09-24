@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 
 import { ControlPad } from "@/components/nanpure/ControlPad";
+import { DigitConfirmDialog } from "@/components/nanpure/DigitConfirmDialog";
 import { PlayResultPanel } from "@/components/nanpure/PlayResultPanel";
 import { CELL_SIZE_EXPR, SudokuBoard } from "@/components/nanpure/SudokuBoard";
 import { useTechniquePlayback } from "@/components/nanpure/useTechniquePlayback";
@@ -11,6 +12,7 @@ import {
   createPlaySession,
   isCellReadOnly,
   isDigitComplete,
+  isDigitMismatchingSolution,
   playSessionReducer,
 } from "@/lib/models/play_session";
 import { PlayHistory } from "@/lib/models/play_history";
@@ -144,6 +146,10 @@ export function SudokuPlayClient({
       () => loadAutoRunTechniqueIds() ?? initialAutoRunTechniqueSelection(),
     );
   const [hintMessage, setHintMessage] = useState<string | null>(null);
+  const [pendingDigitInput, setPendingDigitInput] = useState<{
+    index: number;
+    digit: number;
+  } | null>(null);
   const [celebrating, setCelebrating] = useState(false);
   const [prevPhaseKind, setPrevPhaseKind] = useState(phase.kind);
 
@@ -251,11 +257,30 @@ export function SudokuPlayClient({
       if (phase.kind !== "playing") return;
       if (digitComplete[digit]) return;
       if (selectedIndex === null || cellReadOnly[selectedIndex]) return;
+      if (isDigitMismatchingSolution(state, selectedIndex, digit)) {
+        setPendingDigitInput({ index: selectedIndex, digit });
+        return;
+      }
       dispatch({ type: "placeDigit", index: selectedIndex, digit });
       setTechniqueHighlightedCells(null);
     },
-    [phase, digitComplete, selectedIndex, cellReadOnly],
+    [phase, digitComplete, selectedIndex, cellReadOnly, state],
   );
+
+  const confirmPendingDigitInput = useCallback(() => {
+    if (pendingDigitInput === null) return;
+    dispatch({
+      type: "placeDigit",
+      index: pendingDigitInput.index,
+      digit: pendingDigitInput.digit,
+    });
+    setPendingDigitInput(null);
+    setTechniqueHighlightedCells(null);
+  }, [pendingDigitInput]);
+
+  const cancelPendingDigitInput = useCallback(() => {
+    setPendingDigitInput(null);
+  }, []);
 
   const toggleTechniqueSelectionForAuto = useCallback(
     (techniqueId: TechniqueId) => {
@@ -402,6 +427,15 @@ export function SudokuPlayClient({
       if (isTechniquePlaying) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
 
+      // 確認ダイアログ中はダイアログのボタンだけが操作できる（Enter / Space はボタン側で処理）
+      if (pendingDigitInput !== null) {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          cancelPendingDigitInput();
+        }
+        return;
+      }
+
       const digit = digitFromKeyboardEvent(e);
       if (digit !== null) {
         e.preventDefault();
@@ -417,7 +451,15 @@ export function SudokuPlayClient({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [phase, isTechniquePlaying, applyDigit, clearCell, toggleMemoAtSelection]);
+  }, [
+    phase,
+    isTechniquePlaying,
+    applyDigit,
+    clearCell,
+    toggleMemoAtSelection,
+    pendingDigitInput,
+    cancelPendingDigitInput,
+  ]);
 
   if (phase.kind === "result" && !celebratingWin) {
     return (
@@ -599,6 +641,11 @@ export function SudokuPlayClient({
           onFocusAnyControl={clearTechniqueHighlightOnFocus}
         />
       </div>
+      <DigitConfirmDialog
+        digit={pendingDigitInput?.digit ?? null}
+        onConfirm={confirmPendingDigitInput}
+        onCancel={cancelPendingDigitInput}
+      />
     </main>
   );
 }
