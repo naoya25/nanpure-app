@@ -56,6 +56,28 @@ describe("puzzleSessionReducer", () => {
     expect(afterSecond).toBe(afterFirst);
   });
 
+  it("解決済みなら同じ key の request でも準備し直す", () => {
+    const request = requestFromQuery(null, "70", 100);
+    const ready: PuzzleSessionState = {
+      status: "ready",
+      request,
+      puzzle: {
+        puzzle_81: SAMPLE_PUZZLE_81,
+        solution_81: "2".repeat(81),
+        level: 50,
+        difficultyPercent: 70,
+      },
+    };
+
+    const nextRequest = requestFromQuery(null, "70", 100);
+    const afterNext = puzzleSessionReducer(ready, {
+      type: "request",
+      request: nextRequest,
+    });
+
+    expect(afterNext).toEqual({ status: "preparing", request: nextRequest });
+  });
+
   it("古い resolved を捨てる", () => {
     const initial: PuzzleSessionState = { status: "idle" };
     const staleRequest = requestFromQuery(null, "70", 100);

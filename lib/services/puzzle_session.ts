@@ -46,7 +46,10 @@ export function puzzleSessionReducer(
   action: PuzzleSessionAction,
 ): PuzzleSessionState {
   if (action.type === "request") {
-    if (requestOf(state)?.key === action.request.key) return state;
+    // 解決済みの同じ key まで弾くと、毎回同じ ?d= を指す「別の問題」が効かなくなる
+    if (state.status === "preparing" && state.request.key === action.request.key) {
+      return state;
+    }
     return { status: "preparing", request: action.request };
   }
 
