@@ -309,12 +309,10 @@ export function SudokuPlayClient({
   const requestHint = useCallback(() => {
     if (phase.kind !== "playing") return;
     if (isTechniquePlaying) return;
-    const ids = Array.from(selectedTechniqueIdsForAuto);
-    if (ids.length === 0) return;
 
     const { steps, conflictCellIndex } = runTechniqueAutoUntilNoChange(
       history.present,
-      ids,
+      TECHNIQUE_LABELS.map((t) => t.id),
       puzzle.solution_81,
       { maxSteps: 1 },
     );
@@ -326,7 +324,7 @@ export function SudokuPlayClient({
     }
 
     if (steps.length === 0) {
-      setHintMessage("選択中のテクニックでは進めません");
+      setHintMessage("収録テクニックでは進めません");
       return;
     }
 
@@ -337,14 +335,10 @@ export function SudokuPlayClient({
     isTechniquePlaying,
     history,
     puzzle.solution_81,
-    selectedTechniqueIdsForAuto,
     playTechniqueSteps,
   ]);
 
-  const canHint =
-    phase.kind === "playing" &&
-    !isTechniquePlaying &&
-    selectedTechniqueIdsForAuto.size > 0;
+  const canHint = phase.kind === "playing" && !isTechniquePlaying;
 
   const clearCell = useCallback(() => {
     if (phase.kind !== "playing") return;
