@@ -888,4 +888,47 @@ export const TECHNIQUE_CASES: TechniqueCaseBase[] = [
       ],
     },
   },
+  {
+    name: "trialAndError 1 (synthetic / r0c2=1 だと r0c0・r0c1 がどちらも 2 になり矛盾、elim r0c2:1)",
+    techniqueId: TechniqueId.TRIAL_AND_ERROR,
+    input: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        if (i === 0 || i === 1) return 3; // {1,2}
+        if (i === 2) return 7; // {1,2,3}
+        return 511;
+      }),
+    },
+    expected: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        if (i === 0 || i === 1) return 3;
+        if (i === 2) return 6; // candidate 1 removed
+        return 511;
+      }),
+    },
+  },
+  {
+    name: "trialAndError 2 (memo 未記入の空マスがあれば適用しない)",
+    techniqueId: TechniqueId.TRIAL_AND_ERROR,
+    input: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => {
+        if (i === 0 || i === 1) return 3;
+        if (i === 2) return 7;
+        if (i === 80) return 0;
+        return 511;
+      }),
+    },
+    expected: null,
+  },
+  {
+    name: "trialAndError 3 (元の盤が矛盾している: 行 0 に 1 の置き場所が無い)",
+    techniqueId: TechniqueId.TRIAL_AND_ERROR,
+    input: {
+      values81: "0".repeat(81),
+      candidateMasks81: Array.from({ length: 81 }, (_, i) => (i < 9 ? 510 : 511)),
+    },
+    expected: null,
+  },
 ];

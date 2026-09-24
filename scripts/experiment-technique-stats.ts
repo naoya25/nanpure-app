@@ -4,6 +4,10 @@
  * 使い方:
  *   npx tsx scripts/experiment-technique-stats.ts
  *   npx tsx scripts/experiment-technique-stats.ts --count=100
+ *   npx tsx scripts/experiment-technique-stats.ts --count=1000 --dump-trial-boards
+ *
+ * `--dump-trial-boards` を付けると、仮置き（TRIAL_AND_ERROR）を使う直前の盤面を
+ * 結果 md と同じ名前の `-trial-boards.json` に書き出す（次に足す手筋を探す材料）。
  */
 
 import fs from "node:fs";
@@ -12,12 +16,23 @@ import { generateSudokuPuzzlePair } from "@/lib/algorithms/generate_sudoku";
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import { runTechniqueAutoUntilNoChange } from "@/lib/models/sudoku_technique_runner";
 import {
+  ALL_TECHNIQUE_IDS,
   TECHNIQUE_LABELS,
-  type TechniqueId,
+  TechniqueId,
 } from "@/lib/types/sudoku_technique_types";
 import { parsePuzzle81 } from "@/lib/validates/grid";
 
 type UsageCounter = Record<TechniqueId, number>;
+
+/** `values81` / `candidateMasks81` は `tests/fixtures/techniques.ts` の `input` と同じ形 */
+type TrialBoard = {
+  puzzle_81: string;
+  solution_81: string;
+  values81: string;
+  candidateMasks81: number[];
+  /** 仮置きの手で候補が変わったマス */
+  eliminatedCellIndex: number[];
+};
 
 function parseCount(argv: string[]): number {
   const arg = argv.find((a) => a.startsWith("--count="));
@@ -31,7 +46,7 @@ function parseCount(argv: string[]): number {
 
 function createEmptyCounter(): UsageCounter {
   return Object.fromEntries(
-    TECHNIQUE_LABELS.map(({ id }) => [id, 0]),
+    ALL_TECHNIQUE_IDS.map((id) => [id, 0]),
   ) as UsageCounter;
 }
 
@@ -65,8 +80,11 @@ function chooseOutputPath(baseDir: string, timestamp: string): string {
 }
 
 async function main(): Promise<void> {
-  const count = parseCount(process.argv.slice(2));
-  const techniqueIds = TECHNIQUE_LABELS.map((t) => t.id);
+  const argv = process.argv.slice(2);
+  const count = parseCount(argv);
+  const dumpTrialBoards = argv.includes("--dump-trial-boards");
+  const techniqueIds = ALL_TECHNIQUE_IDS;
+  const trialBoards: TrialBoard[] = [];
 
   const totalCounter = createEmptyCounter();
   const solvedCounter = createEmptyCounter();
@@ -103,6 +121,20 @@ async function main(): Promise<void> {
     const usageInPuzzle = createEmptyCounter();
     for (const step of result.steps) {
       usageInPuzzle[step.techniqueId] += 1;
+    }
+
+    if (dumpTrialBoards) {
+      result.steps.forEach((step, k) => {
+        if (step.techniqueId !== TechniqueId.TRIAL_AND_ERROR) return;
+        const before = k === 0 ? initialGrid : result.steps[k - 1]!.grid;
+        trialBoards.push({
+          puzzle_81: pair.puzzle_81,
+          solution_81: pair.solution_81,
+          values81: before.values().join(""),
+          candidateMasks81: Array.from({ length: 81 }, (_, c) => before.cellAt(c).memoMask),
+          eliminatedCellIndex: step.cellIndex,
+        });
+      });
     }
 
     const solved = result.grid.values().join("") === pair.solution_81;
@@ -183,6 +215,12 @@ async function main(): Promise<void> {
   const outPath = chooseOutputPath(outDir, timestamp);
   fs.writeFileSync(outPath, report, "utf8");
   console.log(`saved: ${outPath}`);
+
+  if (dumpTrialBoards) {
+    const boardsPath = outPath.replace(/\.md$/, "-trial-boards.json");
+    fs.writeFileSync(boardsPath, `${JSON.stringify(trialBoards, null, 1)}\n`, "utf8");
+    console.log(`saved: ${boardsPath}（仮置き直前の盤面 ${trialBoards.length} 件）`);
+  }
 }
 
 main().catch((e) => {

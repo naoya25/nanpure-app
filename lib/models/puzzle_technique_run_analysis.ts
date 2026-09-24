@@ -1,6 +1,6 @@
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import { runTechniqueAutoUntilNoChange } from "@/lib/models/sudoku_technique_runner";
-import { TECHNIQUE_LABELS, type TechniqueId } from "@/lib/types/sudoku_technique_types";
+import { ALL_TECHNIQUE_IDS, type TechniqueId } from "@/lib/types/sudoku_technique_types";
 import { parsePuzzle81 } from "@/lib/validates/grid";
 
 export type TechniqueStepCounts = Partial<Record<TechniqueId, number>>;
@@ -16,7 +16,7 @@ export type PuzzleTechniqueRunSummary = {
 
 function createEmptyCounter(): Record<TechniqueId, number> {
   return Object.fromEntries(
-    TECHNIQUE_LABELS.map(({ id }) => [id, 0]),
+    ALL_TECHNIQUE_IDS.map((id) => [id, 0]),
   ) as Record<TechniqueId, number>;
 }
 
@@ -45,11 +45,10 @@ export function summarizeTechniqueAutoRunFromStrings(
   puzzle81: string,
   solution81: string,
 ): PuzzleTechniqueRunSummary {
-  const techniqueIds = TECHNIQUE_LABELS.map((t) => t.id);
   const initialGrid = SudokuGrid.fromValues(parsePuzzle81(puzzle81).values);
   const result = runTechniqueAutoUntilNoChange(
     initialGrid,
-    techniqueIds,
+    ALL_TECHNIQUE_IDS,
     solution81,
   );
 

@@ -38,6 +38,7 @@ const TECHNIQUE_WEB_SEARCH_QUERY: Record<TechniqueId, string> = {
   [TechniqueId.X_CYCLE]: "ナンプレ X-Cycle",
   [TechniqueId.ALS_XZ]: "ナンプレ ALS-XZ",
   [TechniqueId.AIC]: "ナンプレ AIC",
+  [TechniqueId.TRIAL_AND_ERROR]: "ナンプレ 仮置き 矛盾",
 };
 
 /** `sudoku-techniques.md` に沿った Google 検索 URL（新しいタブ用） */

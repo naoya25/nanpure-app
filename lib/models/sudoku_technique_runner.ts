@@ -1,6 +1,7 @@
 import type { SudokuGrid } from "@/lib/models/sudoku_grid";
 import { SUDOKU_CELLS } from "@/lib/validates/grid";
 import {
+  ALL_TECHNIQUE_IDS,
   TechniqueAutoRunResult,
   TechniqueApplyResult,
   TechniqueId,
@@ -48,6 +49,7 @@ import { tryXYChainStep } from "@/lib/algorithms/techniques/xy_chain";
 import { tryXCycleStep } from "@/lib/algorithms/techniques/x_cycle";
 import { tryAicStep } from "@/lib/algorithms/techniques/aic";
 import { tryAlsXzStep } from "@/lib/algorithms/techniques/als_xz";
+import { tryTrialAndErrorStep } from "@/lib/algorithms/techniques/trial_and_error";
 
 type TryTechnique = (
   grid: SudokuGrid,
@@ -89,6 +91,7 @@ const TRY_BY_ID: Record<TechniqueId, TryTechnique> = {
   [TechniqueId.FISH_66]: (grid) => tryFish66Step(grid),
   [TechniqueId.FISH_77]: (grid) => tryFish77Step(grid),
   [TechniqueId.FISH_88]: (grid) => tryFish88Step(grid),
+  [TechniqueId.TRIAL_AND_ERROR]: (grid) => tryTrialAndErrorStep(grid),
 };
 
 export function runTechniqueStep(
@@ -103,7 +106,7 @@ function sortByTechniqueOrder(
   selectedTechniqueIds: readonly TechniqueId[],
 ): TechniqueId[] {
   const selected = new Set(selectedTechniqueIds);
-  return Object.values(TechniqueId).filter((id) => selected.has(id));
+  return ALL_TECHNIQUE_IDS.filter((id) => selected.has(id));
 }
 
 /**

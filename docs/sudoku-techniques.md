@@ -45,8 +45,23 @@
 | 上級    | （ID未定）シングル・カラー／マルチカラー／3D Medusa など              | 強いリンクを色分けし、同色同士の矛盾や「どちらかの色が真」から削除。                                                                  | [検索](https://www.google.com/search?q=ナンプレ+シングルカラー+マルチカラー+3D+Medusa)      | yet  |
 | 上級    | `ALS_XZ`                                      | 2つの ALS の共通候補で restricted candidate（X）を使い、もう一方の共通候補（Z）を両 ALS の Z 候補を同時に見るマスから削除。 | [検索](https://www.google.com/search?q=ナンプレ+ALS-XZ)                         | done |
 | 上級    | （ID未定）ALS-XY-Wing / Sue de Coq など             | ほぼロック集合の共通候補からの削除。                                                                                  | [検索](https://www.google.com/search?q=ナンプレ+ALS-XY-Wing+Sue+de+Coq)         | yet  |
-| 探索    | （ID未定）仮置き・矛盾（試し打ち）                              | 候補を仮に真とし伝播、矛盾なら反対が真。**探索**に近く強力。                                                                    | [検索](https://www.google.com/search?q=ナンプレ+仮置き+矛盾)                        | yet  |
+| 探索    | `TRIAL_AND_ERROR`                               | 空マスの候補を 1 つ仮に置き、シングル・隠れシングルだけで進めて矛盾が出たら、その候補を削除する。現実装は **1 段だけ**（分岐の中でさらに仮置きしない）。深い仮置きが要る超難問（Easter Monster など）はこれだけでは解けない。 | [検索](https://www.google.com/search?q=ナンプレ+仮置き+矛盾)                        | done |
 
+
+## 仮置き（`TRIAL_AND_ERROR`）の位置づけ
+
+- 他のテクニックがすべて空振りしたときだけ使う **最後の手段**。適用順（`TechniqueId` の並び）の末尾に置く。
+- 生成器の問題（seed 20260923 の 1000 問）では、仮置き以外の全テクニックで 62 問（6.2%）が詰まり、そのすべてが仮置き 1 段を足すと解けた。
+- 名前つき手筋は、仮置きが必要になった盤面を集計し、多いパターンから足す。盤面は `npm run experiment-technique-stats -- --count=1000 --dump-trial-boards` で `scripts/experiment-results/*-trial-boards.json` に書き出せる。進み具合は同じ統計の `TRIAL_AND_ERROR` 使用率で測る（下がるほど名前つき手筋で解ける範囲が広い）。
+
+## テクニックを足すときに触る場所
+
+1. `lib/algorithms/techniques/` に 1 手分の関数 `tryXxxStep(grid)` を書く。候補削除は `helper.ts` の共通処理（`makeGetMask` / `buildTechniqueResultFromElimBits` など）を使う。
+2. `TechniqueId` に ID を足す。並びが適用順（易→難）。**`TRIAL_AND_ERROR` より前に入れる**（末尾が仮置きであることはテストで固定している）。
+3. 型エラーに従って埋める: `TECHNIQUE_LABEL_BY_ID`（表示名）、`TRY_BY_ID`（runner）、`TECHNIQUE_DIFFICULTY_BASE`（難易度の点）、`TECHNIQUE_WEB_SEARCH_QUERY`（検索語）。
+4. 画面の並び `TECHNIQUE_DISPLAY_ORDER` に足す（適用順とは別。入れ忘れはテストで検出する）。
+5. `tests/fixtures/techniques.ts` にケースを足す。`--dump-trial-boards` の盤面（`values81` / `candidateMasks81`）はそのまま `input` に使える。
+6. この一覧に行を足す。未定義の用語は `docs/sudoku-rule.md` に定義してから使う。
 
 ## 参考（外部）
 

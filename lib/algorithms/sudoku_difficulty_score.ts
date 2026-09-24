@@ -86,6 +86,7 @@ export const TECHNIQUE_DIFFICULTY_BASE: Record<TechniqueId, number> = {
   [TechniqueId.X_CYCLE]: 80,
   [TechniqueId.ALS_XZ]: 82,
   [TechniqueId.AIC]: 84,
+  [TechniqueId.TRIAL_AND_ERROR]: 90,
 };
 
 export type TechniqueStepCounts = Partial<Record<TechniqueId, number>>;

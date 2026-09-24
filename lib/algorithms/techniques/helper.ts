@@ -55,6 +55,13 @@ export function sudokuBlockCellIndices(block: number): readonly number[] {
   return out;
 }
 
+/** 全 27 ユニット（行 9・列 9・ブロック 9）のマス index */
+export const SUDOKU_UNITS: readonly (readonly number[])[] = [
+  ...Array.from({ length: 9 }, (_, r) => sudokuRowCellIndices(r)),
+  ...Array.from({ length: 9 }, (_, c) => sudokuColCellIndices(c)),
+  ...Array.from({ length: 9 }, (_, b) => sudokuBlockCellIndices(b)),
+];
+
 /**
  * 空マスの有効候補を返す getter を作る。
  * - ピア確定値で除外
