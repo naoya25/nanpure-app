@@ -30,12 +30,6 @@ function readDifficultyFromLocation(): DifficultyPercent | null {
   return isDifficultyPercent(percent) ? percent : null;
 }
 
-function initialDifficultyPercent(): DifficultyPercent {
-  if (typeof window === "undefined") return loadDifficultyPercent();
-  if (readSharedPuzzleFromLocation()) return loadDifficultyPercent();
-  return readDifficultyFromLocation() ?? loadDifficultyPercent();
-}
-
 function replaceSharedPuzzleInUrl(puzzle81: string | null): void {
   const url = new URL(window.location.href);
   if (puzzle81) {
@@ -49,9 +43,7 @@ function replaceSharedPuzzleInUrl(puzzle81: string | null): void {
 
 export default function PlayPage() {
   const [state, setState] = useState<PlayPageState>({ status: "loading" });
-  const [difficultyPercent] = useState<DifficultyPercent>(
-    () => initialDifficultyPercent(),
-  );
+  const difficultyRef = useRef<DifficultyPercent>(loadDifficultyPercent());
   const startedRef = useRef(false);
 
   const start = useCallback(
@@ -83,16 +75,19 @@ export default function PlayPage() {
     const sharedPuzzle81 = readSharedPuzzleFromLocation();
     if (!sharedPuzzle81) {
       const fromUrl = readDifficultyFromLocation();
-      if (fromUrl !== null) saveDifficultyPercent(fromUrl);
+      if (fromUrl !== null) {
+        saveDifficultyPercent(fromUrl);
+        difficultyRef.current = fromUrl;
+      }
     }
-    start(sharedPuzzle81, difficultyPercent);
-  }, [start, difficultyPercent]);
+    start(sharedPuzzle81, difficultyRef.current);
+  }, [start]);
 
   const retryWithRandomPuzzle = useCallback(() => {
     setState({ status: "loading" });
     replaceSharedPuzzleInUrl(null);
-    start(null, difficultyPercent);
-  }, [start, difficultyPercent]);
+    start(null, difficultyRef.current);
+  }, [start]);
 
   if (state.status === "loading") {
     return (
