@@ -8,6 +8,9 @@ const STOCK_KEY = "nanpure:stock:v2";
 /** 難易度ごとの目標在庫数 */
 export const PUZZLE_STOCK_TARGET_SIZE = 3;
 
+/** 難易度ごとの在庫上限 */
+export const PUZZLE_STOCK_MAX_SIZE = 12;
+
 type PuzzleStockStateV2 = {
   v: 2;
   items: Puzzle[];
@@ -70,6 +73,13 @@ export function takeOne(difficultyPercent: DifficultyPercent): Puzzle | null {
 
 export function push(item: Puzzle): void {
   const state = readState();
+  if (state.items.some((existing) => existing.puzzle_81 === item.puzzle_81)) {
+    return;
+  }
+  const sameDifficultyCount = state.items.filter(
+    (existing) => existing.difficultyPercent === item.difficultyPercent,
+  ).length;
+  if (sameDifficultyCount >= PUZZLE_STOCK_MAX_SIZE) return;
   writeState({ v: 2, items: [...state.items, item] });
 }
 

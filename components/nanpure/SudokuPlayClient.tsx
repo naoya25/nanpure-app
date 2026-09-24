@@ -105,17 +105,10 @@ function initialAutoRunTechniqueSelection(): ReadonlySet<TechniqueId> {
   return new Set(throughPencil.map((t) => t.id));
 }
 
-/**
- * `onRequestNewPuzzle` は `<Link href="/play">` の代わり。
- * 現在の URL は `/play/?p=<81文字>` で pathname が同じため、Link では
- * Next の router が同一ルートと見なして再マウントが起きず、何も起きない。
- */
 export function SudokuPlayClient({
   puzzle,
-  onRequestNewPuzzle,
 }: {
   puzzle: SudokuPlayPuzzle;
-  onRequestNewPuzzle: () => void;
 }) {
   const { values: seedValues, fixed } = useMemo(
     () => parsePuzzle81(puzzle.puzzle_81),
@@ -433,7 +426,7 @@ export function SudokuPlayClient({
         level={puzzle.level}
         mistakes={mistakes}
         techniqueUsage={techniqueUsage}
-        onRequestNewPuzzle={onRequestNewPuzzle}
+        difficultyPercent={puzzle.difficultyPercent}
         onStartReplay={startReplayFromResult}
       />
     );
@@ -533,13 +526,12 @@ export function SudokuPlayClient({
             <span className="font-semibold text-zinc-900">{mistakes}</span>
           </p>
           <div className="mt-2 flex flex-col gap-1">
-            <button
-              type="button"
-              onClick={onRequestNewPuzzle}
+            <Link
+              href={`/play/?d=${puzzle.difficultyPercent}`}
               className="text-left text-zinc-500 underline hover:text-zinc-800"
             >
-              別の問題
-            </button>
+              別の問題（{puzzle.difficultyPercent}%）
+            </Link>
             <Link
               href="/"
               className="text-zinc-500 underline hover:text-zinc-800"

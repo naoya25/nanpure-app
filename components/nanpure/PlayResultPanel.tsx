@@ -1,5 +1,6 @@
 import Link from "next/link";
 
+import type { DifficultyPercent } from "@/lib/types/puzzle";
 import {
   TECHNIQUE_LABELS,
   TechniqueId,
@@ -55,7 +56,7 @@ export function PlayResultPanel({
   level,
   mistakes,
   techniqueUsage,
-  onRequestNewPuzzle,
+  difficultyPercent,
   onStartReplay,
 }: {
   won: boolean;
@@ -65,7 +66,7 @@ export function PlayResultPanel({
     byTechnique: ReadonlyMap<TechniqueId, number>;
     manualSteps: number;
   };
-  onRequestNewPuzzle: () => void;
+  difficultyPercent: DifficultyPercent;
   onStartReplay: () => void;
 }) {
   return (
@@ -99,13 +100,12 @@ export function PlayResultPanel({
             振り返る
           </button>
         ) : null}
-        <button
-          type="button"
-          onClick={onRequestNewPuzzle}
+        <Link
+          href={`/play/?d=${difficultyPercent}`}
           className="inline-flex justify-center rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-medium text-white hover:bg-zinc-800"
         >
-          別の問題（ランダム）
-        </button>
+          別の問題（{difficultyPercent}%）
+        </Link>
         <Link
           href="/"
           className="inline-flex justify-center rounded-lg border border-zinc-300 px-4 py-2.5 text-sm font-medium text-zinc-800 hover:bg-zinc-50"
