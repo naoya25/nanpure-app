@@ -40,9 +40,14 @@ function cellHighlights(
   index: number,
   selectedIndex: number | null,
   grid: readonly number[],
+  highlightDigit: number | null,
 ): CellHighlight {
   if (selectedIndex === null) {
-    return { selected: false, digitMatch: false, inBand: false };
+    return {
+      selected: false,
+      digitMatch: highlightDigit !== null && grid[index] === highlightDigit,
+      inBand: false,
+    };
   }
   const sr = Math.floor(selectedIndex / 9);
   const sc = selectedIndex % 9;
@@ -54,8 +59,8 @@ function cellHighlights(
     ci === sc ||
     (Math.floor(ri / 3) === Math.floor(sr / 3) &&
       Math.floor(ci / 3) === Math.floor(sc / 3));
-  const sv = grid[selectedIndex];
-  const digitMatch = sv >= 1 && sv <= 9 && grid[index] === sv && !selected;
+  const digitMatch =
+    highlightDigit !== null && grid[index] === highlightDigit && !selected;
   const inBandOnly = inBand && !selected;
   return {
     selected,
@@ -202,7 +207,12 @@ export function SudokuBoard({
         }}
       >
         {gridValues.map((value, i) => {
-          const h = cellHighlights(i, selectedIndex, gridValues);
+          const h = cellHighlights(
+            i,
+            selectedIndex,
+            gridValues,
+            memoHighlightDigit,
+          );
           const incorrect =
             solution81 !== undefined
               ? isCellMismatchingSolution(i, gridValues, solution81, fixed)

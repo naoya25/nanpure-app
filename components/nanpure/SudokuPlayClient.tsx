@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { ControlPad } from "@/components/nanpure/ControlPad";
 import { DigitConfirmDialog } from "@/components/nanpure/DigitConfirmDialog";
 import { HintExplanationPanel } from "@/components/nanpure/HintExplanationPanel";
+import { LikeButton } from "@/components/nanpure/LikeButton";
 import { PlayResultPanel } from "@/components/nanpure/PlayResultPanel";
 import { CELL_SIZE_EXPR, SudokuBoard } from "@/components/nanpure/SudokuBoard";
 import { useTechniquePlayback } from "@/components/nanpure/useTechniquePlayback";
@@ -27,6 +28,7 @@ import {
   loadAutoRunTechniqueIds,
   saveAutoRunTechniqueIds,
 } from "@/lib/services/auto_run_settings";
+import { isPuzzleLiked, setPuzzleLiked } from "@/lib/services/liked_puzzles";
 import {
   clearSavedPlay,
   loadSavedPlay,
@@ -159,6 +161,10 @@ export function SudokuPlayClient({
       () => loadAutoRunTechniqueIds() ?? initialAutoRunTechniqueSelection(),
     );
   const [hintMessage, setHintMessage] = useState<string | null>(null);
+  /** 数字ボタンで選んだ強調する数字。盤に 1 つも無い数字はマスを選べないため、ここから強調する */
+  const [padHighlightDigit, setPadHighlightDigit] = useState<number | null>(
+    null,
+  );
   /** ヒント一覧で押せる手。`null` のときは一覧を閉じている（一覧はモーダルなので開いている間は盤が変わらない） */
   const [hintSteps, setHintSteps] = useState<
     readonly TechniqueAutoRunStep[] | null
@@ -171,6 +177,8 @@ export function SudokuPlayClient({
     index: number;
     digit: number;
   } | null>(null);
+  const [liked, setLiked] = useState(() => isPuzzleLiked(puzzle.puzzle_81));
+  const [likeMessage, setLikeMessage] = useState<string | null>(null);
   const [celebrating, setCelebrating] = useState(false);
   const [prevPhaseKind, setPrevPhaseKind] = useState(phase.kind);
 
@@ -254,12 +262,13 @@ export function SudokuPlayClient({
     clearSavedPlay(puzzle.puzzle_81);
   }, [phase, puzzle.puzzle_81]);
 
-  /** 選択マスに確定数字があるとき、盤上のメモで同じ数字を強調する */
+  /** 盤上で強調する数字（同じ数字のマスとメモ）。数字ボタンで選んだものを、選択マスの確定数字より優先する */
   const memoHighlightDigit = useMemo(() => {
+    if (padHighlightDigit !== null) return padHighlightDigit;
     if (selectedIndex === null) return null;
     const v = gridValues[selectedIndex];
     return v >= 1 && v <= 9 ? v : null;
-  }, [selectedIndex, gridValues]);
+  }, [padHighlightDigit, selectedIndex, gridValues]);
 
   const cellReadOnly = useMemo(
     () => Array.from({ length: 81 }, (_, i) => isCellReadOnly(state, i)),
@@ -277,7 +286,12 @@ export function SudokuPlayClient({
     (digit: number) => {
       if (phase.kind !== "playing") return;
       if (digitComplete[digit]) return;
-      if (selectedIndex === null || cellReadOnly[selectedIndex]) return;
+      // 入力できるマスを選んでいないときは、その数字の強調を切り替える
+      if (selectedIndex === null || cellReadOnly[selectedIndex]) {
+        setPadHighlightDigit((prev) => (prev === digit ? null : digit));
+        return;
+      }
+      setPadHighlightDigit(null);
       if (isDigitMismatchingSolution(state, selectedIndex, digit)) {
         setPendingDigitInput({ index: selectedIndex, digit });
         return;
@@ -302,6 +316,20 @@ export function SudokuPlayClient({
   const cancelPendingDigitInput = useCallback(() => {
     setPendingDigitInput(null);
   }, []);
+
+  const toggleLike = useCallback(() => {
+    const outcome = setPuzzleLiked(puzzle, !liked);
+    if (outcome === "ok") {
+      setLiked(!liked);
+      setLikeMessage(null);
+      return;
+    }
+    setLikeMessage(
+      outcome === "limit_reached"
+        ? "いいねできる数の上限です。「いいねした問題」から減らしてください。"
+        : "保存できませんでした。ブラウザの保存領域を確認してください。",
+    );
+  }, [puzzle, liked]);
 
   const toggleTechniqueSelectionForAuto = useCallback(
     (techniqueId: TechniqueId) => {
@@ -436,6 +464,7 @@ export function SudokuPlayClient({
       const col = Math.min(8, Math.max(0, (prev % 9) + dCol));
       return row * 9 + col;
     });
+    setPadHighlightDigit(null);
     setTechniqueHighlightedCells(null);
     setHintMessage(null);
   }, []);
@@ -494,6 +523,7 @@ export function SudokuPlayClient({
     (index: number) => {
       if (isTechniquePlaying) skipTechniquePlayback();
       setHintPreview(null);
+      setPadHighlightDigit(null);
       setSelectedIndex(index);
       setTechniqueHighlightedCells(null);
       setHintMessage(null);
@@ -585,6 +615,9 @@ export function SudokuPlayClient({
         techniqueUsage={techniqueUsage}
         difficultyPercent={puzzle.difficultyPercent}
         onStartReplay={startReplayFromResult}
+        liked={liked}
+        onToggleLike={toggleLike}
+        likeMessage={likeMessage}
       />
     );
   }
@@ -686,6 +719,13 @@ export function SudokuPlayClient({
             ミス:{" "}
             <span className="font-semibold text-zinc-900">{mistakes}</span>
           </p>
+          <div className="mt-2 flex justify-end">
+            <LikeButton
+              liked={liked}
+              onToggle={toggleLike}
+              message={likeMessage}
+            />
+          </div>
           <div className="mt-2 flex flex-col gap-1">
             <Link
               href={`/play/?d=${puzzle.difficultyPercent}`}

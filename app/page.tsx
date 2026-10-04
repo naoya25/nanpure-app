@@ -58,6 +58,12 @@ export default function Home() {
             テクニックを学ぶ
           </Link>
           <Link
+            href="/liked"
+            className="inline-flex h-11 items-center justify-center rounded-full border border-zinc-300 bg-white px-7 text-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50"
+          >
+            いいねした問題
+          </Link>
+          <Link
             href="/create"
             className="inline-flex h-11 items-center justify-center rounded-full border border-zinc-300 bg-white px-7 text-sm font-semibold text-zinc-800 transition-colors hover:bg-zinc-50"
           >

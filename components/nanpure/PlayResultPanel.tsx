@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { LikeButton } from "@/components/nanpure/LikeButton";
+
 import type { DifficultyPercent } from "@/lib/types/puzzle";
 import {
   TECHNIQUE_LABELS,
@@ -58,6 +60,9 @@ export function PlayResultPanel({
   techniqueUsage,
   difficultyPercent,
   onStartReplay,
+  liked,
+  onToggleLike,
+  likeMessage,
 }: {
   won: boolean;
   level: number;
@@ -68,6 +73,9 @@ export function PlayResultPanel({
   };
   difficultyPercent: DifficultyPercent;
   onStartReplay: () => void;
+  liked: boolean;
+  onToggleLike: () => void;
+  likeMessage: string | null;
 }) {
   return (
     <main className="mx-auto max-w-md px-4 py-12">
@@ -86,6 +94,9 @@ export function PlayResultPanel({
         間違えた入力の回数（目安）:{" "}
         <span className="font-medium text-zinc-800">{mistakes}</span>
       </p>
+      <div className="mt-4 flex">
+        <LikeButton liked={liked} onToggle={onToggleLike} message={likeMessage} />
+      </div>
       <TechniqueUsageList
         byTechnique={techniqueUsage.byTechnique}
         manualSteps={techniqueUsage.manualSteps}

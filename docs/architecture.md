@@ -106,6 +106,7 @@ DB は無い。問題の形は `lib/types/puzzle.ts` の `Puzzle` 型のみ。
 
 - `nanpure:stock:v3`（`puzzle_stock.ts`）: 生成済み・未使用の `Puzzle` 配列。`difficultyPercent` ごとに目標在庫数 3 件（旧 `nanpure:stock:v1` は `difficultyPercent` を持たないため、`v2` は旧計算式の `level` を持つため読まない）。
 - `nanpure:progress:v1`（`play_progress.ts`）: 解きかけの盤面。`puzzle_81` をキーに最大 20 件、古い順に切り捨てる。**undo/redo 履歴は保存しない。**
+- `nanpure:liked:v1`（`liked_puzzles.ts`）: いいねした問題の配列（`puzzle_81` / `level` / `likedAt`）。上限 200 件で、超えたら古いものを消さずに保存を断る。読み書きは `lib/services/liked_puzzles.ts` 経由。解答は保存せず、開くときに共有 URL と同じ `?p=` の経路で復元する。
 - `nanpure:settings:v1`（`play_settings.ts`）: プレイ画面の設定。自動実行で選択中のテクニック ID（`autoRunTechniqueIds: string[]`）と、選択中の難易度（`difficultyPercent?: number`、任意）。読み書きは `lib/services/difficulty_settings.ts` 経由。
 
 ## 開発の進め方
@@ -121,6 +122,8 @@ DB は無い。問題の形は `lib/types/puzzle.ts` の `Puzzle` 型のみ。
 
 ## 更新履歴
 
+- 2026-10-04: いいね機能を追加。プレイ画面と結果画面の「いいね」（`components/nanpure/LikeButton.tsx`）で問題を端末に保存し、`/liked/` の一覧から `?p=` で開き直せる。保存の成否は `lib/services/liked_puzzles.ts` の `setPuzzleLiked()` が outcome（`ok` / `limit_reached` / `storage_failed`）で返す。一覧は localStorage を初回描画で読むため `next/dynamic` の `ssr: false` で描画する。
+- 2026-10-04: 入力できるマスを選んでいないとき（未選択、または確定済みのマスを選択中）に数字ボタン・数字キーを押すと、その数字の強調（同じ数字のマスとメモ）を切り替える。盤に 1 つも置かれていない数字は、選べるマスが無く強調できなかったため。マスを選び直すと解除する。
 - 2026-10-04: マスの呼び方を「2行3列」から **B3**（行 A〜I × 列 1〜9）に変え、盤の左と上に符号を表示した。定義は `docs/sudoku-rule.md` の「マスの符号」。ブロックは左上から 1〜9 の番号で呼ぶ（左上と右下のマスで示す案は解説が長くなるため不採用）。呼び方は `/learn/` の冒頭で説明する。表記は `lib/utils/grid.ts` の `cellLabel` / `rowLabel` / `colLabel` / `blockLabel` だけで決まる。
 - 2026-10-04: 自動実行を 1 タップにした。自動実行ボタンは保存済みの選択でそのまま実行し、テクニックの選び直しは隣の設定ボタン（`AutoRunPopover`）に分けた。設定はチェックボックスの縦並びから、押して切り替えるチップ（「基本」と「メモを使うテクニック」の 2 群、プリセット「基本だけにする」「すべて選ぶ」）に変えた。1 手も進まなかったときは「選んだテクニックでは進めません」と出す。
 - 2026-10-04: ヒントを「今の盤面でどこに・なぜ使えるか」を教える形にした。各テクニック関数（`lib/algorithms/techniques/`）は 1 手の結果に `explanation`（`TechniqueExplanation`: 根拠マス `basisCellIndex` と、今の盤面のマス名・数字を入れた理由 `reason`）を付けて返す。マス名・ユニット名の表記は `lib/utils/grid.ts`（`cellLabel` など）に一本化。ヒント一覧でテクニックを押すと即適用せず、盤に根拠マス（`--cell-bg-basis`）と変わるマスを示して `components/nanpure/HintExplanationPanel.tsx` に理由と変更内容（`lib/models/technique_step_changes.ts` の `describeTechniqueStepChanges()`）を出し、「この手を進める」で適用する。解説中の盤の編集は止め、キーボードは Escape（閉じる）だけ受け付ける。既知の制限: メモが古い盤面では、候補削除系のテクニックが「古い候補の掃除」だけの手を返すことがあり、そのとき理由と変更マスが食い違う。
