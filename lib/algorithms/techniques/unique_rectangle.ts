@@ -6,6 +6,7 @@ import {
 } from "@/lib/algorithms/techniques/helper";
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
+import { cellLabel, cellsLabel, digitsLabel } from "@/lib/utils/grid";
 
 function blockIndex(cell: number): number {
   const r = Math.floor(cell / 9);
@@ -65,7 +66,18 @@ export function tryUniqueRectangleStep(
                 getMask,
                 elimBitsByCell,
               );
-              if (hit) return hit;
+              if (hit) {
+                return {
+                  ...hit,
+                  explanation: {
+                    basisCellIndex: corners,
+                    reason:
+                      `${cellsLabel(corners)}の 4 マスは長方形で、${digitsLabel(pairMask)}を共有しています。` +
+                      `${cellLabel(target)}が ${digitsLabel(pairMask)} のままだと、この 4 マスで ${digitsLabel(pairMask)} を入れ替えた解が 2 通りできてしまいます(一意性仮定)。` +
+                      `解は 1 つだけなので、${cellLabel(target)}から ${digitsLabel(pairMask)} を消せます。`,
+                  },
+                };
+              }
             }
           }
         }

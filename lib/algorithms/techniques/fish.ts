@@ -1,12 +1,17 @@
 import {
   buildTechniqueResultFromElimBits,
+  type GetMask,
   hasEmptyCellWithoutMemo,
   makeGetMask,
   popcount9,
 } from "@/lib/algorithms/techniques/helper";
 
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
-import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
+import type {
+  TechniqueApplyResult,
+  TechniqueExplanation,
+} from "@/lib/types/sudoku_technique_types";
+import { colLabel, rowLabel } from "@/lib/utils/grid";
 
 /** 9×9 で基本魚として意味のあるサイズ（N=9 は「全行／全列」になり削除が起きない）。 */
 type FishSize = 2 | 3 | 4 | 5 | 6 | 7 | 8;
@@ -30,6 +35,34 @@ function forEachCombination9(
     }
   };
   rec(0, 0);
+}
+
+function fishExplanation(
+  kind: "row" | "col",
+  lines: readonly number[],
+  crossBits: number,
+  digit: number,
+  getMask: GetMask,
+): TechniqueExplanation {
+  const bit = 1 << (digit - 1);
+  const cross = Array.from({ length: 9 }, (_, i) => i).filter(
+    (i) => (crossBits & (1 << i)) !== 0,
+  );
+  const lineLabel = kind === "row" ? rowLabel : colLabel;
+  const crossLabel = kind === "row" ? colLabel : rowLabel;
+  const cellOf = (line: number, x: number) =>
+    kind === "row" ? line * 9 + x : x * 9 + line;
+  const linesText = lines.map(lineLabel).join("・");
+  const crossText = cross.map(crossLabel).join("・");
+  return {
+    basisCellIndex: lines
+      .flatMap((line) => cross.map((x) => cellOf(line, x)))
+      .filter((i) => (getMask(i) & bit) !== 0),
+    reason:
+      `${linesText}では、${digit} の候補が${crossText}にしかありません。` +
+      `どの並びでも${crossText}の ${digit} はこの${lines.length}${kind === "row" ? "行" : "列"}で使われるので、` +
+      `${crossText}のほかのマスから ${digit} を消せます。`,
+  };
 }
 
 /**
@@ -91,12 +124,16 @@ function tryBasicFishStepOfSize(
           }
         }
 
-        result = buildTechniqueResultFromElimBits(
+        const hit = buildTechniqueResultFromElimBits(
           grid,
           values,
           getMask,
           elimBitsByCell,
         );
+        result = hit && {
+          ...hit,
+          explanation: fishExplanation("row", rows, colBits, digit, getMask),
+        };
       });
       if (result !== null) return result;
     }
@@ -146,12 +183,16 @@ function tryBasicFishStepOfSize(
           }
         }
 
-        result = buildTechniqueResultFromElimBits(
+        const hit = buildTechniqueResultFromElimBits(
           grid,
           values,
           getMask,
           elimBitsByCell,
         );
+        result = hit && {
+          ...hit,
+          explanation: fishExplanation("col", cols, rowBits, digit, getMask),
+        };
       });
       if (result !== null) return result;
     }

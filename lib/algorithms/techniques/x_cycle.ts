@@ -9,6 +9,7 @@ import {
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import { sudokuPeerIndices } from "@/lib/validates/grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
+import { cellLabel, digitsLabel } from "@/lib/utils/grid";
 
 type EdgeType = "strong" | "weak";
 
@@ -156,8 +157,21 @@ export function tryXCycleStep(grid: SudokuGrid): TechniqueApplyResult | null {
               );
               pathEdges.pop();
               if (hit) {
-                if (!hasDiscontinuous) return hit;
-                if (!discontinuousFallback) discontinuousFallback = hit;
+                const loop = pathNodes.map(cellLabel).join(" → ");
+                const digitText = digitsLabel(bit);
+                const withExplanation: TechniqueApplyResult = {
+                  ...hit,
+                  explanation: {
+                    basisCellIndex: [...pathNodes],
+                    reason: hasDiscontinuous
+                      ? `${digitText} について ${loop} → ${cellLabel(start)} と強いリンクと弱いリンクをたどると輪になりますが、弱いリンクが2つ続くマスがあります。` +
+                        `そのマスに ${digitText} を入れると矛盾するので、${digitText} を消せます。`
+                      : `${digitText} について ${loop} → ${cellLabel(start)} と強いリンクと弱いリンクを交互にたどると輪になります。` +
+                        `弱いリンクもどちらかが必ず ${digitText} になるので、その2マスと同じユニットにある他のマスから ${digitText} を消せます。`,
+                  },
+                };
+                if (!hasDiscontinuous) return withExplanation;
+                if (!discontinuousFallback) discontinuousFallback = withExplanation;
               }
               continue;
             }

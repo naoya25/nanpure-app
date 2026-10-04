@@ -10,6 +10,13 @@ import {
 
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
+import {
+  cellsLabel,
+  blockLabel,
+  colLabel,
+  digitsLabel,
+  rowLabel,
+} from "@/lib/utils/grid";
 
 /**
  * ペア(2) / トリプル(3) / クァッド(4)。ユニット内の n マスで候補の和集合がちょうど n 種類 → 他マスからその n 数字の候補を削除。
@@ -49,6 +56,7 @@ function trySubsetEliminationAfterPencil(
   const getMask = makeGetMask(values, grid);
 
   const scanUnit = (
+    unitLabel: string,
     unitIndices: readonly number[],
   ): TechniqueApplyResult | null => {
     const empties: number[] = [];
@@ -79,26 +87,37 @@ function trySubsetEliminationAfterPencil(
         const overlap = m & union;
         if (overlap !== 0) elimBitsByCell[i] |= overlap;
       }
-      found = buildTechniqueResultFromElimBits(
+      const hit = buildTechniqueResultFromElimBits(
         grid,
         values,
         getMask,
         elimBitsByCell,
       );
+      if (!hit) return;
+      const digits = digitsLabel(union);
+      found = {
+        ...hit,
+        explanation: {
+          basisCellIndex: [...comb],
+          reason:
+            `${unitLabel}の${cellsLabel(comb)}は候補が ${digits} の${subsetSize}つだけです。` +
+            `この${subsetSize}マスで ${digits} を使い切るので、${unitLabel}のほかのマスから ${digits} を消せます。`,
+        },
+      };
     });
     return found;
   };
 
   for (let r = 0; r < 9; r++) {
-    const hit = scanUnit(sudokuRowCellIndices(r));
+    const hit = scanUnit(rowLabel(r), sudokuRowCellIndices(r));
     if (hit) return hit;
   }
   for (let c = 0; c < 9; c++) {
-    const hit = scanUnit(sudokuColCellIndices(c));
+    const hit = scanUnit(colLabel(c), sudokuColCellIndices(c));
     if (hit) return hit;
   }
   for (let b = 0; b < 9; b++) {
-    const hit = scanUnit(sudokuBlockCellIndices(b));
+    const hit = scanUnit(blockLabel(b), sudokuBlockCellIndices(b));
     if (hit) return hit;
   }
 

@@ -8,6 +8,7 @@ import {
 import type { SudokuGrid } from "@/lib/models/sudoku_grid";
 import { sudokuPeerIndices } from "@/lib/validates/grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
+import { blockLabel, cellLabel, colLabel, rowLabel } from "@/lib/utils/grid";
 
 function tryUnit(
   values: readonly number[],
@@ -60,35 +61,17 @@ export function tryHiddenSingleStep(
     return candidateMask;
   };
 
-  for (let r = 0; r < 9; r++) {
-    const hit = tryUnit(values, getMask, sudokuRowCellIndices(r));
-    if (!hit) continue;
-    const existing = opsByCell.get(hit.cellIndex);
-    if (existing !== undefined && existing !== hit.digit) {
-      continue;
-    }
+  const unitByCell = new Map<number, { label: string; cells: readonly number[] }>();
+  const collect = (label: string, cells: readonly number[]) => {
+    const hit = tryUnit(values, getMask, cells);
+    if (!hit) return;
+    if (opsByCell.has(hit.cellIndex)) return;
     opsByCell.set(hit.cellIndex, hit.digit);
-  }
-
-  for (let c = 0; c < 9; c++) {
-    const hit = tryUnit(values, getMask, sudokuColCellIndices(c));
-    if (!hit) continue;
-    const existing = opsByCell.get(hit.cellIndex);
-    if (existing !== undefined && existing !== hit.digit) {
-      continue;
-    }
-    opsByCell.set(hit.cellIndex, hit.digit);
-  }
-
-  for (let b = 0; b < 9; b++) {
-    const hit = tryUnit(values, getMask, sudokuBlockCellIndices(b));
-    if (!hit) continue;
-    const existing = opsByCell.get(hit.cellIndex);
-    if (existing !== undefined && existing !== hit.digit) {
-      continue;
-    }
-    opsByCell.set(hit.cellIndex, hit.digit);
-  }
+    unitByCell.set(hit.cellIndex, { label, cells });
+  };
+  for (let r = 0; r < 9; r++) collect(rowLabel(r), sudokuRowCellIndices(r));
+  for (let c = 0; c < 9; c++) collect(colLabel(c), sudokuColCellIndices(c));
+  for (let b = 0; b < 9; b++) collect(blockLabel(b), sudokuBlockCellIndices(b));
 
   if (opsByCell.size === 0) return null;
 
@@ -103,5 +86,17 @@ export function tryHiddenSingleStep(
   }
 
   if (changedCells.length === 0) return null;
-  return { cellIndex: changedCells, grid: nextGrid };
+  const first = changedCells[0]!;
+  const unit = unitByCell.get(first)!;
+  const others = changedCells.length - 1;
+  return {
+    cellIndex: changedCells,
+    grid: nextGrid,
+    explanation: {
+      basisCellIndex: unit.cells.filter((i) => i !== first),
+      reason:
+        `${unit.label}で ${opsByCell.get(first)} を入れられるマスは${cellLabel(first)}だけです。` +
+        (others > 0 ? `ほか ${others} マスも同じ理由で決まります。` : ""),
+    },
+  };
 }

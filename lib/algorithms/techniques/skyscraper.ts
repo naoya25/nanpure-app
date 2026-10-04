@@ -7,6 +7,7 @@ import {
 
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
+import { cellsLabel, colLabel, rowLabel } from "@/lib/utils/grid";
 
 /** 9 ビットのマスクでちょうど 1 ビットが立っているとき、そのインデックス 0..8 */
 function soleBitIndex(mask: number): number {
@@ -16,6 +17,24 @@ function soleBitIndex(mask: number): number {
     if (m & (1 << i)) return i;
   }
   return -1;
+}
+
+function skyscraperExplanation(
+  digit: number,
+  link1Unit: string,
+  link2Unit: string,
+  floorUnit: string,
+  roof1: number,
+  roof2: number,
+  floors: readonly [number, number],
+) {
+  return {
+    basisCellIndex: [roof1, roof2, ...floors],
+    reason:
+      `${digit} は${link1Unit}の${cellsLabel([roof1, floors[0]])}、${link2Unit}の${cellsLabel([roof2, floors[1]])}のどちらかにしか入れない強いリンクです。` +
+      `${floorUnit}の${cellsLabel(floors)}は同時に ${digit} になれないので、${cellsLabel([roof1, roof2])}のどちらかは必ず ${digit} になります。` +
+      `この2マスの両方から見えるマスから ${digit} を消せます。`,
+  };
 }
 
 /**
@@ -86,7 +105,20 @@ export function trySkyscraperStep(
           bit,
           [roof1, roof2, floorCells[0], floorCells[1]],
         );
-        if (hit) return hit;
+        if (hit) {
+          return {
+            ...hit,
+            explanation: skyscraperExplanation(
+              digit,
+              rowLabel(r1),
+              rowLabel(r2),
+              colLabel(sharedCol),
+              roof1,
+              roof2,
+              floorCells,
+            ),
+          };
+        }
       }
     }
 
@@ -123,7 +155,20 @@ export function trySkyscraperStep(
           bit,
           [roof1, roof2, floorCells[0], floorCells[1]],
         );
-        if (hit) return hit;
+        if (hit) {
+          return {
+            ...hit,
+            explanation: skyscraperExplanation(
+              digit,
+              colLabel(col1),
+              colLabel(col2),
+              rowLabel(sharedRow),
+              roof1,
+              roof2,
+              floorCells,
+            ),
+          };
+        }
       }
     }
   }

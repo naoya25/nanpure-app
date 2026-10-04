@@ -5,6 +5,7 @@ import {
 import type { SudokuGrid } from "@/lib/models/sudoku_grid";
 import { sudokuPeerIndices } from "@/lib/validates/grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
+import { cellLabel, digitsLabel } from "@/lib/utils/grid";
 
 /**
  * シングル（ピアの確定数字から候補を求め、そのマスで候補が 1 つだけの空マス）。
@@ -18,6 +19,7 @@ export function trySingleStep(
   // 1周だけ走査し、元の盤だけを見て手を収集してから最後に一括適用する。
   const values = [...grid.values()];
   const opsByCell = new Map<number, number>();
+  const usedMaskByCell = new Map<number, number>();
   for (let i = 0; i < 81; i++) {
     if (values[i] !== 0) continue;
 
@@ -52,6 +54,7 @@ export function trySingleStep(
       continue;
     }
     opsByCell.set(i, digit);
+    usedMaskByCell.set(i, usedMask);
   }
   if (opsByCell.size === 0) return null;
 
@@ -66,5 +69,22 @@ export function trySingleStep(
   }
 
   if (changedCells.length === 0) return null;
-  return { cellIndex: changedCells, grid: nextGrid };
+  const first = changedCells[0]!;
+  const digit = opsByCell.get(first)!;
+  const usedMask = usedMaskByCell.get(first)!;
+  const others = changedCells.length - 1;
+  return {
+    cellIndex: changedCells,
+    grid: nextGrid,
+    explanation: {
+      basisCellIndex: sudokuPeerIndices(first).filter(
+        (j) => j !== first && values[j] !== 0,
+      ),
+      reason:
+        (popcount9(usedMask) === 8
+          ? `${cellLabel(first)}は、同じ行・列・ブロックに ${digitsLabel(usedMask)} があるので、${digit} しか入りません。`
+          : `${cellLabel(first)}は、同じ行・列・ブロックの数字とメモを合わせると、候補が ${digit} だけになります。`) +
+        (others > 0 ? `ほか ${others} マスも同じ理由で決まります。` : ""),
+    },
+  };
 }

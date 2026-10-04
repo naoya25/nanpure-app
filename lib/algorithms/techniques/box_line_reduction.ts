@@ -9,6 +9,7 @@ import {
 
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
+import { blockLabel, cellsLabel, colLabel, rowLabel } from "@/lib/utils/grid";
 
 /** セルインデックス `0..80` の属するブロック番号 `0..8`（左→右・上→下） */
 function cellBlockIndex(i: number): number {
@@ -40,6 +41,20 @@ export function tryBoxLineReductionStep(
   return tryBoxLineReductionEliminationAfterPencil(grid);
 }
 
+function boxLineExplanation(
+  unit: string,
+  digit: number,
+  block: number,
+  cells: readonly number[],
+) {
+  return {
+    basisCellIndex: [...cells],
+    reason:
+      `${unit}で ${digit} が入るマスは${cellsLabel(cells)}だけで、すべて${blockLabel(block)}にあります。` +
+      `${unit}の ${digit} は${blockLabel(block)}の中で決まるので、${blockLabel(block)}の${unit}以外のマスから ${digit} を消せます。`,
+  };
+}
+
 function tryBoxLineReductionEliminationAfterPencil(
   grid: SudokuGrid,
 ): TechniqueApplyResult | null {
@@ -55,9 +70,13 @@ function tryBoxLineReductionEliminationAfterPencil(
       const elimBitsByCell = new Array<number>(81).fill(0);
 
       const blockSet = new Set<number>();
+      const lineCells: number[] = [];
       for (const i of rowCells) {
         if (values[i] !== 0) continue;
-        if (getMask(i) & bit) blockSet.add(cellBlockIndex(i));
+        if (getMask(i) & bit) {
+          blockSet.add(cellBlockIndex(i));
+          lineCells.push(i);
+        }
       }
 
       if (blockSet.size !== 1) continue;
@@ -75,7 +94,12 @@ function tryBoxLineReductionEliminationAfterPencil(
         getMask,
         elimBitsByCell,
       );
-      if (hit) return hit;
+      if (hit) {
+        return {
+          ...hit,
+          explanation: boxLineExplanation(rowLabel(r), digit, block, lineCells),
+        };
+      }
     }
   }
 
@@ -88,9 +112,13 @@ function tryBoxLineReductionEliminationAfterPencil(
       const elimBitsByCell = new Array<number>(81).fill(0);
 
       const blockSet = new Set<number>();
+      const lineCells: number[] = [];
       for (const i of colCells) {
         if (values[i] !== 0) continue;
-        if (getMask(i) & bit) blockSet.add(cellBlockIndex(i));
+        if (getMask(i) & bit) {
+          blockSet.add(cellBlockIndex(i));
+          lineCells.push(i);
+        }
       }
 
       if (blockSet.size !== 1) continue;
@@ -108,7 +136,12 @@ function tryBoxLineReductionEliminationAfterPencil(
         getMask,
         elimBitsByCell,
       );
-      if (hit) return hit;
+      if (hit) {
+        return {
+          ...hit,
+          explanation: boxLineExplanation(colLabel(c), digit, block, lineCells),
+        };
+      }
     }
   }
 

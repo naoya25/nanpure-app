@@ -9,6 +9,7 @@ import {
 } from "@/lib/algorithms/techniques/helper";
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
+import { cellLabel, digitsLabel } from "@/lib/utils/grid";
 
 function bitList(mask: number): number[] {
   const out: number[] = [];
@@ -74,7 +75,25 @@ export function tryBugPlusOneStep(
 
     const elimBitsByCell = new Array<number>(81).fill(0);
     elimBitsByCell[bugCell] = bugMask & ~bit;
-    return buildTechniqueResultFromElimBits(grid, values, getMask, elimBitsByCell);
+    const hit = buildTechniqueResultFromElimBits(grid, values, getMask, elimBitsByCell);
+    if (!hit) return null;
+    const basis = new Set([
+      ...sudokuRowCellIndices(row),
+      ...sudokuColCellIndices(col),
+      ...sudokuBlockCellIndices(block),
+    ]);
+    return {
+      ...hit,
+      explanation: {
+        basisCellIndex: [...basis].filter(
+          (i) => i !== bugCell && values[i] === 0 && (getMask(i) & bit) !== 0,
+        ),
+        reason:
+          `${cellLabel(bugCell)}以外の空きマスは、すべて候補が 2 つだけです。` +
+          `${cellLabel(bugCell)}が ${digitsLabel(bit)} 以外になると、どの行・列・ブロックでも各数字の候補がちょうど 2 回ずつになり、解が 2 通りできてしまいます(一意性仮定)。` +
+          `解は 1 つだけなので、${cellLabel(bugCell)}は ${digitsLabel(bit)} で確定します。`,
+      },
+    };
   }
 
   return null;

@@ -3,7 +3,9 @@ import { SUDOKU_CELLS } from "@/lib/validates/grid";
 import {
   ALL_TECHNIQUE_IDS,
   TechniqueAutoRunResult,
+  TechniqueApplicableStepsResult,
   TechniqueApplyResult,
+  type TechniqueAutoRunStep,
   TechniqueId,
 } from "@/lib/types/sudoku_technique_types";
 
@@ -102,6 +104,67 @@ export function runTechniqueStep(
   return TRY_BY_ID[techniqueId](grid, solution81);
 }
 
+/** 確定値が `solution81` と食い違うマス。`solution81` が無い・壊れているときは `null` */
+function findConflictCellIndex(
+  grid: SudokuGrid,
+  solution81: string | undefined,
+): number[] | null {
+  if (!solution81) return null;
+  const conflicts: number[] = [];
+  for (let i = 0; i < SUDOKU_CELLS; i++) {
+    const value = grid.cellAt(i).value;
+    if (value === 0) continue;
+    const solutionDigit = Number(solution81[i] ?? "0");
+    if (solutionDigit < 1 || solutionDigit > 9) {
+      return null;
+    }
+    if (value !== solutionDigit) {
+      conflicts.push(i);
+    }
+  }
+  return conflicts.length > 0 ? conflicts : null;
+}
+
+/**
+ * 今の盤面に 1 手適用できるテクニックを、それぞれの 1 手つきで適用順（易→難）に列挙する（ヒント一覧用）。
+ * 仮置き（`TRIAL_AND_ERROR`）は最後の手段なので、ほかに 1 つも無いときだけ含める。
+ * 盤に解答と違う数字があれば列挙せず、そのマスを返す。
+ * 適用後に解答と食い違う手（誤ったメモが原因）は一覧から外す。
+ */
+export function findApplicableTechniqueSteps(
+  grid: SudokuGrid,
+  solution81?: string,
+): TechniqueApplicableStepsResult {
+  const conflictCellIndex = findConflictCellIndex(grid, solution81);
+  if (conflictCellIndex) {
+    return { kind: "conflict", conflictCellIndex };
+  }
+
+  const tryOne = (techniqueId: TechniqueId): TechniqueAutoRunStep | null => {
+    const result = runTechniqueStep(grid, techniqueId, solution81);
+    if (!result) return null;
+    if (findConflictCellIndex(result.grid, solution81)) return null;
+    return {
+      techniqueId,
+      cellIndex: result.cellIndex,
+      grid: result.grid,
+      explanation: result.explanation,
+    };
+  };
+
+  const steps: TechniqueAutoRunStep[] = [];
+  for (const techniqueId of ALL_TECHNIQUE_IDS) {
+    if (techniqueId === TechniqueId.TRIAL_AND_ERROR) continue;
+    const step = tryOne(techniqueId);
+    if (step) steps.push(step);
+  }
+  if (steps.length === 0) {
+    const trial = tryOne(TechniqueId.TRIAL_AND_ERROR);
+    if (trial) steps.push(trial);
+  }
+  return { kind: "ok", steps };
+}
+
 function sortByTechniqueOrder(
   selectedTechniqueIds: readonly TechniqueId[],
 ): TechniqueId[] {
@@ -128,22 +191,8 @@ export function runTechniqueAutoUntilNoChange(
 
   let nextGrid = grid;
   const steps: TechniqueAutoRunResult["steps"] = [];
-  const getConflictCellIndex = (current: SudokuGrid): number[] | null => {
-    if (!solution81) return null;
-    const conflicts: number[] = [];
-    for (let i = 0; i < SUDOKU_CELLS; i++) {
-      const value = current.cellAt(i).value;
-      if (value === 0) continue;
-      const solutionDigit = Number(solution81[i] ?? "0");
-      if (solutionDigit < 1 || solutionDigit > 9) {
-        return null;
-      }
-      if (value !== solutionDigit) {
-        conflicts.push(i);
-      }
-    }
-    return conflicts.length > 0 ? conflicts : null;
-  };
+  const getConflictCellIndex = (current: SudokuGrid) =>
+    findConflictCellIndex(current, solution81);
 
   // 反復上限は安全弁。通常は「易→難を一周して適用なし」で終了する。
   const maxTryOneTechnique = 81 * 9 * ordered.length;

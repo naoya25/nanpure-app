@@ -46,5 +46,13 @@ export function tryPencilMarkStep(
     values,
     nextCandidateMasks,
   );
-  return { cellIndex: changedCells, grid: nextGrid };
+  return {
+    cellIndex: changedCells,
+    grid: nextGrid,
+    explanation: {
+      basisCellIndex: [],
+      reason:
+        "メモがまだ無い空きマスに、同じ行・列・ブロックに無い数字を候補として書き込みます。ここから先のテクニックは、この候補を減らしていきます。",
+    },
+  };
 }

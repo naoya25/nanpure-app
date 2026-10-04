@@ -9,6 +9,7 @@ import {
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import { sudokuPeerIndices } from "@/lib/validates/grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
+import { cellLabel, digitsLabel } from "@/lib/utils/grid";
 
 type EdgeType = "strong" | "weak";
 
@@ -103,7 +104,18 @@ export function tryXChainStep(grid: SudokuGrid): TechniqueApplyResult | null {
               bit,
               path,
             );
-            if (hit) return hit;
+            if (hit) {
+              return {
+                ...hit,
+                explanation: {
+                  basisCellIndex: [...path],
+                  reason:
+                    `${digitsLabel(bit)} について ${path.map(cellLabel).join(" → ")} と、強いリンクと弱いリンクを交互にたどります。` +
+                    `強いリンクで始まり強いリンクで終わるので、両端のどちらかは必ず ${digitsLabel(bit)} になります。` +
+                    `両端を同時に見るマスから ${digitsLabel(bit)} を消せます。`,
+                },
+              };
+            }
           }
           if (edgeCount >= maxEdges) return null;
 

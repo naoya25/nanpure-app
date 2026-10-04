@@ -7,6 +7,7 @@ import {
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import { sudokuPeerIndices } from "@/lib/validates/grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
+import { cellLabel, digitsLabel } from "@/lib/utils/grid";
 
 function bitList(mask: number): number[] {
   const out: number[] = [];
@@ -90,7 +91,17 @@ export function tryXYChainStep(grid: SudokuGrid): TechniqueApplyResult | null {
               targetBit,
               path,
             );
-            if (hit) return hit;
+            if (hit) {
+              return {
+                ...hit,
+                explanation: {
+                  basisCellIndex: [...path],
+                  reason:
+                    `${path.map(cellLabel).join(" → ")} と候補2つのマスをたどると、両端のどちらかは必ず ${digitsLabel(targetBit)} になります。` +
+                    `両端を同時に見るマスから ${digitsLabel(targetBit)} を消せます。`,
+                },
+              };
+            }
           }
 
           const out = dfs(next, nextCarry);

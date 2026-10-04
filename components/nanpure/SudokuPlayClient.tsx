@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 
 import { ControlPad } from "@/components/nanpure/ControlPad";
 import { DigitConfirmDialog } from "@/components/nanpure/DigitConfirmDialog";
+import { HintExplanationPanel } from "@/components/nanpure/HintExplanationPanel";
 import { PlayResultPanel } from "@/components/nanpure/PlayResultPanel";
 import { CELL_SIZE_EXPR, SudokuBoard } from "@/components/nanpure/SudokuBoard";
 import { useTechniquePlayback } from "@/components/nanpure/useTechniquePlayback";
@@ -17,7 +18,9 @@ import {
 } from "@/lib/models/play_session";
 import { PlayHistory } from "@/lib/models/play_history";
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
+import { describeTechniqueStepChanges } from "@/lib/models/technique_step_changes";
 import {
+  findApplicableTechniqueSteps,
   runTechniqueAutoUntilNoChange,
 } from "@/lib/models/sudoku_technique_runner";
 import {
@@ -31,6 +34,8 @@ import {
 } from "@/lib/services/saved_play_progress";
 import type { DifficultyPercent, Puzzle } from "@/lib/types/puzzle";
 import {
+  TECHNIQUE_IMPORTANCE_LABELS,
+  TECHNIQUE_LABEL_BY_ID,
   TECHNIQUE_LABELS,
   TechniqueId,
   type TechniqueAutoRunStep,
@@ -95,6 +100,14 @@ function digitFromKeyboardEvent(e: KeyboardEvent): number | null {
   return null;
 }
 
+/** 矢印キー → [行の増分, 列の増分] */
+const ARROW_KEY_DELTAS: Record<string, readonly [number, number]> = {
+  ArrowUp: [-1, 0],
+  ArrowDown: [1, 0],
+  ArrowLeft: [0, -1],
+  ArrowRight: [0, 1],
+};
+
 /** 自動実行の既定チェック: ペンシルマークまで（メモ前提テクニックはオフ） */
 function initialAutoRunTechniqueSelection(): ReadonlySet<TechniqueId> {
   const pencilIdx = TECHNIQUE_LABELS.findIndex(
@@ -146,6 +159,14 @@ export function SudokuPlayClient({
       () => loadAutoRunTechniqueIds() ?? initialAutoRunTechniqueSelection(),
     );
   const [hintMessage, setHintMessage] = useState<string | null>(null);
+  /** ヒント一覧で押せる手。`null` のときは一覧を閉じている（一覧はモーダルなので開いている間は盤が変わらない） */
+  const [hintSteps, setHintSteps] = useState<
+    readonly TechniqueAutoRunStep[] | null
+  >(null);
+  /** ヒント一覧で選んだ手。盤に根拠と変更マスを示し、解説を出している間だけ値を持つ */
+  const [hintPreview, setHintPreview] = useState<TechniqueAutoRunStep | null>(
+    null,
+  );
   const [pendingDigitInput, setPendingDigitInput] = useState<{
     index: number;
     digit: number;
@@ -185,7 +206,7 @@ export function SudokuPlayClient({
     isPlaying: isTechniquePlaying,
   } = useTechniquePlayback(dispatch, handleTechniqueStepShown);
 
-  const techniqueButtons = TECHNIQUE_LABELS;
+  const techniqueButtons = TECHNIQUE_IMPORTANCE_LABELS;
 
   useEffect(() => {
     saveAutoRunTechniqueIds(selectedTechniqueIdsForAuto);
@@ -298,6 +319,10 @@ export function SudokuPlayClient({
     setSelectedTechniqueIdsForAuto(new Set(TECHNIQUE_LABELS.map((t) => t.id)));
   }, []);
 
+  const selectBasicTechniqueSelectionsForAuto = useCallback(() => {
+    setSelectedTechniqueIdsForAuto(initialAutoRunTechniqueSelection());
+  }, []);
+
   const applyTechniquesAuto = useCallback(() => {
     if (phase.kind !== "playing") return;
     if (isTechniquePlaying) return;
@@ -311,7 +336,10 @@ export function SudokuPlayClient({
     );
 
     setShowAutoRunList(false);
-    if (steps.length === 0) return;
+    if (steps.length === 0) {
+      setHintMessage("選んだテクニックでは進めません");
+      return;
+    }
 
     setHintMessage(null);
     playTechniqueSteps(steps);
@@ -328,33 +356,89 @@ export function SudokuPlayClient({
     if (phase.kind !== "playing") return;
     if (isTechniquePlaying) return;
 
-    const { steps, conflictCellIndex } = runTechniqueAutoUntilNoChange(
+    const result = findApplicableTechniqueSteps(
       history.present,
-      TECHNIQUE_LABELS.map((t) => t.id),
       puzzle.solution_81,
-      { maxSteps: 1 },
     );
 
-    if (conflictCellIndex) {
+    if (result.kind === "conflict") {
       setHintMessage("間違っているマスがあります");
-      setTechniqueHighlightedCells(new Set(conflictCellIndex));
+      setTechniqueHighlightedCells(new Set(result.conflictCellIndex));
       return;
     }
 
-    if (steps.length === 0) {
+    if (result.steps.length === 0) {
       setHintMessage("収録テクニックでは進めません");
       return;
     }
 
     setHintMessage(null);
-    playTechniqueSteps(steps);
-  }, [
-    phase,
-    isTechniquePlaying,
-    history,
-    puzzle.solution_81,
-    playTechniqueSteps,
-  ]);
+    setShowAutoRunList(false);
+    setHintSteps(result.steps);
+  }, [phase, isTechniquePlaying, history, puzzle.solution_81]);
+
+  const hintTechniques = useMemo(() => {
+    if (hintSteps === null) return null;
+    const available = new Set(hintSteps.map((s) => s.techniqueId));
+    return TECHNIQUE_IMPORTANCE_LABELS.filter((t) => available.has(t.id));
+  }, [hintSteps]);
+
+  const previewHintTechnique = useCallback(
+    (techniqueId: TechniqueId) => {
+      const step = hintSteps?.find((s) => s.techniqueId === techniqueId);
+      setHintSteps(null);
+      if (!step || phase.kind !== "playing" || isTechniquePlaying) return;
+      setHintPreview(step);
+      setTechniqueHighlightedCells(new Set(step.cellIndex));
+    },
+    [hintSteps, phase, isTechniquePlaying],
+  );
+
+  const closeHintTechniques = useCallback(() => {
+    setHintSteps(null);
+  }, []);
+
+  const closeHintPreview = useCallback(() => {
+    setHintPreview(null);
+    setTechniqueHighlightedCells(null);
+  }, []);
+
+  const applyHintPreview = useCallback(() => {
+    if (hintPreview === null) return;
+    setHintPreview(null);
+    if (phase.kind !== "playing" || isTechniquePlaying) return;
+    playTechniqueSteps([hintPreview]);
+  }, [hintPreview, phase, isTechniquePlaying, playTechniqueSteps]);
+
+  const backToHintList = useCallback(() => {
+    setHintPreview(null);
+    setTechniqueHighlightedCells(null);
+    requestHint();
+  }, [requestHint]);
+
+  const hintPreviewBasisCells = useMemo(
+    () =>
+      hintPreview?.explanation
+        ? new Set(hintPreview.explanation.basisCellIndex)
+        : null,
+    [hintPreview],
+  );
+  const hintPreviewChanges = useMemo(
+    () =>
+      hintPreview ? describeTechniqueStepChanges(board, hintPreview) : [],
+    [hintPreview, board],
+  );
+
+  const moveSelection = useCallback((dRow: number, dCol: number) => {
+    setSelectedIndex((prev) => {
+      if (prev === null) return 0;
+      const row = Math.min(8, Math.max(0, Math.floor(prev / 9) + dRow));
+      const col = Math.min(8, Math.max(0, (prev % 9) + dCol));
+      return row * 9 + col;
+    });
+    setTechniqueHighlightedCells(null);
+    setHintMessage(null);
+  }, []);
 
   const canHint = phase.kind === "playing" && !isTechniquePlaying;
 
@@ -409,6 +493,7 @@ export function SudokuPlayClient({
   const handleSelectIndex = useCallback(
     (index: number) => {
       if (isTechniquePlaying) skipTechniquePlayback();
+      setHintPreview(null);
       setSelectedIndex(index);
       setTechniqueHighlightedCells(null);
       setHintMessage(null);
@@ -436,6 +521,31 @@ export function SudokuPlayClient({
         return;
       }
 
+      // ヒント一覧も同じくモーダル
+      if (hintSteps !== null) {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          closeHintTechniques();
+        }
+        return;
+      }
+
+      // ヒントの解説中は、盤の編集を止めて Escape（閉じる）だけ受け付ける
+      if (hintPreview !== null) {
+        if (e.key === "Escape") {
+          e.preventDefault();
+          closeHintPreview();
+        }
+        return;
+      }
+
+      const arrow = ARROW_KEY_DELTAS[e.key];
+      if (arrow) {
+        e.preventDefault();
+        moveSelection(arrow[0], arrow[1]);
+        return;
+      }
+
       const digit = digitFromKeyboardEvent(e);
       if (digit !== null) {
         e.preventDefault();
@@ -459,6 +569,11 @@ export function SudokuPlayClient({
     toggleMemoAtSelection,
     pendingDigitInput,
     cancelPendingDigitInput,
+    hintSteps,
+    closeHintTechniques,
+    hintPreview,
+    closeHintPreview,
+    moveSelection,
   ]);
 
   if (phase.kind === "result" && !celebratingWin) {
@@ -537,6 +652,7 @@ export function SudokuPlayClient({
             selectedTechniqueIds={selectedTechniqueIdsForAuto}
             onToggleTechniqueSelection={toggleTechniqueSelectionForAuto}
             onSelectAllTechniqueSelections={selectAllTechniqueSelectionsForAuto}
+            onSelectBasicTechniqueSelections={selectBasicTechniqueSelectionsForAuto}
             onAutoRunTechniques={applyTechniquesAuto}
             canAutoRunTechniques={false}
             techniqueButtons={techniqueButtons}
@@ -545,6 +661,9 @@ export function SudokuPlayClient({
             onHint={requestHint}
             canHint={false}
             hintMessage={null}
+            hintTechniques={null}
+            onApplyHintTechnique={previewHintTechnique}
+            onCloseHintTechniques={closeHintTechniques}
             onFocusAnyControl={clearTechniqueHighlightOnFocus}
           />
         </div>
@@ -598,9 +717,20 @@ export function SudokuPlayClient({
           memoHighlightDigit={memoHighlightDigit}
           solution81={puzzle.solution_81}
           techniqueHighlightedCells={techniqueHighlightedCells}
+          basisHighlightedCells={hintPreviewBasisCells}
           celebrate={celebratingWin}
         />
-        {history.presentTechniqueId ? (
+        {hintPreview ? (
+          <HintExplanationPanel
+            techniqueLabel={TECHNIQUE_LABEL_BY_ID[hintPreview.techniqueId]}
+            explanation={hintPreview.explanation}
+            changes={hintPreviewChanges}
+            learnHref={`/learn/#${hintPreview.techniqueId}`}
+            onApply={applyHintPreview}
+            onBackToList={backToHintList}
+            onClose={closeHintPreview}
+          />
+        ) : history.presentTechniqueId ? (
           <PresentTechniqueFootnote techniqueId={history.presentTechniqueId} />
         ) : null}
         <ControlPad
@@ -628,16 +758,20 @@ export function SudokuPlayClient({
           selectedTechniqueIds={selectedTechniqueIdsForAuto}
           onToggleTechniqueSelection={toggleTechniqueSelectionForAuto}
           onSelectAllTechniqueSelections={selectAllTechniqueSelectionsForAuto}
+          onSelectBasicTechniqueSelections={selectBasicTechniqueSelectionsForAuto}
           onAutoRunTechniques={applyTechniquesAuto}
           canAutoRunTechniques={
             phase.kind === "playing" && selectedTechniqueIdsForAuto.size > 0
           }
           techniqueButtons={techniqueButtons}
           isPlaying={phase.kind === "playing"}
-          inputLocked={isTechniquePlaying}
+          inputLocked={isTechniquePlaying || hintPreview !== null}
           onHint={requestHint}
           canHint={canHint}
           hintMessage={hintMessage}
+          hintTechniques={hintTechniques}
+          onApplyHintTechnique={previewHintTechnique}
+          onCloseHintTechniques={closeHintTechniques}
           onFocusAnyControl={clearTechniqueHighlightOnFocus}
         />
       </div>

@@ -1,6 +1,7 @@
 import { popcount9 } from "@/lib/algorithms/techniques/helper";
 import type { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
+import { cellLabel } from "@/lib/utils/grid";
 
 /**
  * メモ1候補の確定（ペンシルマークが 1 桁だけの空マスを、そのメモの数字で確定する）。
@@ -44,5 +45,16 @@ export function tryMemoSingleStep(
   }
 
   if (changedCells.length === 0) return null;
-  return { cellIndex: changedCells, grid: nextGrid };
+  const first = changedCells[0]!;
+  const others = changedCells.length - 1;
+  return {
+    cellIndex: changedCells,
+    grid: nextGrid,
+    explanation: {
+      basisCellIndex: [],
+      reason:
+        `${cellLabel(first)}のメモは ${opsByCell.get(first)} だけなので、${opsByCell.get(first)} が入ります。` +
+        (others > 0 ? `ほか ${others} マスも同じ理由で決まります。` : ""),
+    },
+  };
 }

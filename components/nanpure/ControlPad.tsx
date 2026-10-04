@@ -1,8 +1,11 @@
 import { AutoRunIcon } from "@/components/icons/auto-run-icon";
 import { ClearSelectionIcon } from "@/components/icons/clear-selection-icon";
+import { HintIcon } from "@/components/icons/hint-icon";
 import { RedoIcon } from "@/components/icons/redo-icon";
+import { SettingsIcon } from "@/components/icons/settings-icon";
 import { UndoIcon } from "@/components/icons/undo-icon";
 import { AutoRunPopover } from "@/components/nanpure/AutoRunPopover";
+import { TechniquePopover } from "@/components/nanpure/TechniquePopover";
 import type { TechniqueDescriptor, TechniqueId } from "@/lib/types/sudoku_technique_types";
 
 type ControlPadProps = {
@@ -21,6 +24,7 @@ type ControlPadProps = {
   selectedTechniqueIds: ReadonlySet<TechniqueId>;
   onToggleTechniqueSelection: (techniqueId: TechniqueId) => void;
   onSelectAllTechniqueSelections: () => void;
+  onSelectBasicTechniqueSelections: () => void;
   onAutoRunTechniques: () => void;
   canAutoRunTechniques: boolean;
   techniqueButtons: readonly TechniqueDescriptor[];
@@ -32,6 +36,10 @@ type ControlPadProps = {
   onHint: () => void;
   canHint: boolean;
   hintMessage: string | null;
+  /** ヒントで出す「使えるテクニック」一覧。`null` のときは閉じている */
+  hintTechniques: readonly TechniqueDescriptor[] | null;
+  onApplyHintTechnique: (techniqueId: TechniqueId) => void;
+  onCloseHintTechniques: () => void;
   onFocusAnyControl: () => void;
 };
 
@@ -51,6 +59,7 @@ export function ControlPad({
   selectedTechniqueIds,
   onToggleTechniqueSelection,
   onSelectAllTechniqueSelections,
+  onSelectBasicTechniqueSelections,
   onAutoRunTechniques,
   canAutoRunTechniques,
   techniqueButtons,
@@ -60,6 +69,9 @@ export function ControlPad({
   onHint,
   canHint,
   hintMessage,
+  hintTechniques,
+  onApplyHintTechnique,
+  onCloseHintTechniques,
   onFocusAnyControl,
 }: ControlPadProps) {
   const locked = replayMode || playbackLocked;
@@ -110,7 +122,7 @@ export function ControlPad({
         ))}
       </div>
       <div className="relative flex flex-col items-center gap-2">
-        <div className="flex items-center justify-center gap-2">
+        <div className="flex flex-wrap items-center justify-center gap-2">
           <button
             type="button"
             disabled={(!replayMode && !isPlaying) || !canUndo || playbackLocked}
@@ -146,26 +158,37 @@ export function ControlPad({
           </button>
           <button
             type="button"
+            onClick={onAutoRunTechniques}
+            onFocus={onFocusAnyControl}
+            disabled={locked || !isPlaying || !canAutoRunTechniques}
+            title="自動実行: 選んであるテクニックで進める"
+            aria-label="自動実行"
+            className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-900 bg-zinc-900 text-white active:bg-zinc-700 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-800"
+          >
+            <AutoRunIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+          </button>
+          <button
+            type="button"
             onClick={onToggleAutoRunList}
             onFocus={onFocusAnyControl}
             aria-expanded={showAutoRunList ? "true" : undefined}
             disabled={locked || !isPlaying}
-            title="テクニック自動実行の設定"
-            aria-label="テクニック自動実行の設定"
+            title="自動実行で使うテクニックを選ぶ"
+            aria-label="自動実行の設定"
             className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-50 text-zinc-700 active:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-100"
           >
-            <AutoRunIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+            <SettingsIcon className="h-5 w-5 sm:h-6 sm:w-6" />
           </button>
           <button
             type="button"
             onClick={onHint}
             onFocus={onFocusAnyControl}
             disabled={locked || !isPlaying || !canHint}
-            title="選択中のテクニックで一手だけ進める"
+            title="ヒント: この盤面で使えるテクニックを表示する"
             aria-label="ヒント"
-            className="inline-flex min-h-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-50 px-3 text-sm font-medium text-zinc-700 active:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:hover:bg-zinc-100"
+            className="inline-flex min-h-11 min-w-11 touch-manipulation items-center justify-center rounded-md border border-zinc-300 bg-zinc-50 text-zinc-700 active:bg-zinc-100 disabled:pointer-events-none disabled:opacity-40 sm:min-h-12 sm:min-w-12 sm:hover:bg-zinc-100"
           >
-            ヒント
+            <HintIcon className="h-5 w-5 sm:h-6 sm:w-6" />
           </button>
         </div>
         {hintMessage ? (
@@ -177,9 +200,17 @@ export function ControlPad({
           selectedTechniqueIds={selectedTechniqueIds}
           onToggleTechniqueSelection={onToggleTechniqueSelection}
           onSelectAllTechniqueSelections={onSelectAllTechniqueSelections}
+          onSelectBasicTechniqueSelections={onSelectBasicTechniqueSelections}
           onRun={onAutoRunTechniques}
           canRun={canAutoRunTechniques}
           onClose={onCloseAutoRunList}
+          onFocusAnyControl={onFocusAnyControl}
+        />
+        <TechniquePopover
+          open={hintTechniques !== null}
+          techniques={hintTechniques ?? []}
+          onApply={onApplyHintTechnique}
+          onClose={onCloseHintTechniques}
           onFocusAnyControl={onFocusAnyControl}
         />
       </div>

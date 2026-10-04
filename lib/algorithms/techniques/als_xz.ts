@@ -9,6 +9,7 @@ import {
 } from "@/lib/algorithms/techniques/helper";
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
+import { cellsLabel, digitsLabel } from "@/lib/utils/grid";
 import { sudokuPeerIndices } from "@/lib/validates/grid";
 
 type Als = {
@@ -157,7 +158,20 @@ export function tryAlsXzStep(grid: SudokuGrid): TechniqueApplyResult | null {
             getMask,
             elimBitsByCell,
           );
-          if (hit) return hit;
+          if (hit) {
+            return {
+              ...hit,
+              explanation: {
+                basisCellIndex: [...a.cells, ...b.cells],
+                reason:
+                  `${cellsLabel(a.cells)} は ${a.cells.length} マスに候補 ${digitsLabel(a.unionMask)} の ${a.cells.length + 1} 種類だけで、` +
+                  `${cellsLabel(b.cells)} は ${b.cells.length} マスに候補 ${digitsLabel(b.unionMask)} の ${b.cells.length + 1} 種類だけです。` +
+                  `両者の ${digitsLabel(x)} を持つマスは互いに見合っているので(制限共通候補)、両方で ${digitsLabel(x)} が入ることはありません。` +
+                  `そのため、どちらかの ALS では ${digitsLabel(z)} を持つマスのどれかに必ず ${digitsLabel(z)} が入ります。` +
+                  `${cellsLabel(zCells)} をすべて見るマスから ${digitsLabel(z)} を消せます。`,
+              },
+            };
+          }
         }
       }
     }

@@ -9,6 +9,7 @@ import {
 
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
+import { blockLabel, cellsLabel, colLabel, rowLabel } from "@/lib/utils/grid";
 
 /** セルインデックス `0..80` の属するブロック番号 `0..8`（左→右・上→下） */
 function cellBlockIndex(i: number): number {
@@ -78,7 +79,30 @@ function tryPointingEliminationAfterPencil(
         getMask,
         elimBitsByCell,
       );
-      if (hit) return hit;
+      if (hit) {
+        if (!rowLine && !colLine) {
+          return {
+            ...hit,
+            explanation: {
+              basisCellIndex: [],
+              reason: "メモに、同じ行・列・ブロックの確定した数字と重なる候補が残っています。これらは入らないので消せます。",
+            },
+          };
+        }
+        const lines = [
+          ...(rowLine ? [rowLabel(r0)] : []),
+          ...(colLine ? [colLabel(c0)] : []),
+        ].join("と");
+        return {
+          ...hit,
+          explanation: {
+            basisCellIndex: inBlock,
+            reason:
+              `${blockLabel(b)}で ${digit} が入るマスは${cellsLabel(inBlock)}だけで、すべて${lines}にあります。` +
+              `${blockLabel(b)}の ${digit} は${lines}のどこかに入るので、${lines}の${blockLabel(b)}以外のマスから ${digit} を消せます。`,
+          },
+        };
+      }
     }
   }
 

@@ -11,6 +11,7 @@ import {
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
 import { sudokuPeerIndices } from "@/lib/validates/grid";
+import { cellLabel, cellsLabel, digitsLabel } from "@/lib/utils/grid";
 
 function bitList(mask: number): number[] {
   const out: number[] = [];
@@ -90,7 +91,17 @@ export function tryXYWingStep(grid: SudokuGrid): TechniqueApplyResult | null {
           getMask,
           elimBitsByCell,
         );
-        if (hit) return hit;
+        if (hit) {
+          return {
+            ...hit,
+            explanation: {
+              basisCellIndex: [pivot, w1, w2],
+              reason:
+                `軸の${cellLabel(pivot)}(候補 ${digitsLabel(pm)})がどちらになっても、翼の${cellLabel(w1)}(${digitsLabel(m1)})か${cellLabel(w2)}(${digitsLabel(getMask(w2))})のどちらかが ${digitsLabel(z)} になります。` +
+                `両方の翼を同時に見るマスから ${digitsLabel(z)} を消せます。`,
+            },
+          };
+        }
       }
     }
   }
@@ -144,7 +155,17 @@ export function tryXYZWingStep(
             getMask,
             elimBitsByCell,
           );
-          if (hit) return hit;
+          if (hit) {
+            return {
+              ...hit,
+              explanation: {
+                basisCellIndex: [pivot, w1, w2],
+                reason:
+                  `軸の${cellLabel(pivot)}(候補 ${digitsLabel(pm)})がどの数字になっても、軸か翼の${cellLabel(w1)}(${digitsLabel(need1)})・${cellLabel(w2)}(${digitsLabel(need2)})のどれかが ${digitsLabel(z)} になります。` +
+                  `軸と両方の翼を同時に見るマスから ${digitsLabel(z)} を消せます。`,
+              },
+            };
+          }
         }
       }
     }
@@ -207,13 +228,25 @@ export function tryWXYZWingStep(
             if (getMask(i) & d) elimBitsByCell[i] |= d;
           }
 
-          hit = buildTechniqueResultFromElimBits(
+          const built = buildTechniqueResultFromElimBits(
             grid,
             values,
             getMask,
             elimBitsByCell,
           );
-          if (hit) return;
+          if (built) {
+            hit = {
+              ...built,
+              explanation: {
+                basisCellIndex: [...comb],
+                reason:
+                  `${cellsLabel(comb)}の 4 マスには、候補が ${digitsLabel(union)} の 4 種類しかありません。` +
+                  `そのため ${digitsLabel(d)} はこの 4 マスのどれかに必ず入ります。` +
+                  `${digitsLabel(d)} が入りうる全マスを同時に見るマスから ${digitsLabel(d)} を消せます。`,
+              },
+            };
+            return;
+          }
         }
       }
     });
@@ -278,17 +311,17 @@ export function tryWWingStep(grid: SudokuGrid): TechniqueApplyResult | null {
       const links = strongLinksByDigit[xDigit - 1]!;
       const peersB = new Set(sudokuPeerIndices(b));
 
-      let linkFound = false;
+      let link: readonly [number, number] | null = null;
       for (const [c1, c2] of links) {
         if (c1 === a || c1 === b || c2 === a || c2 === b) continue;
         const direct = peersA.has(c1) && peersB.has(c2);
         const reverse = peersA.has(c2) && peersB.has(c1);
         if (direct || reverse) {
-          linkFound = true;
+          link = [c1, c2];
           break;
         }
       }
-      if (!linkFound) continue;
+      if (!link) continue;
 
       const elimBitsByCell = new Array<number>(81).fill(0);
       for (let i = 0; i < 81; i++) {
@@ -303,7 +336,18 @@ export function tryWWingStep(grid: SudokuGrid): TechniqueApplyResult | null {
         getMask,
         elimBitsByCell,
       );
-      if (hit) return hit;
+      if (hit) {
+        return {
+          ...hit,
+          explanation: {
+            basisCellIndex: [a, b, link[0], link[1]],
+            reason:
+              `${cellLabel(a)}と${cellLabel(b)}は同じ候補(${digitsLabel(ma)})です。` +
+              `${cellLabel(link[0])}と${cellLabel(link[1])}のどちらかには必ず ${digitsLabel(x)} が入り、どちらも${cellLabel(a)}か${cellLabel(b)}を見ています。` +
+              `だから ${cellLabel(a)}・${cellLabel(b)}の少なくとも一方は ${digitsLabel(y)} になり、両方を同時に見るマスから ${digitsLabel(y)} を消せます。`,
+          },
+        };
+      }
     }
   }
 

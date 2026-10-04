@@ -7,6 +7,7 @@ import {
 } from "@/lib/algorithms/techniques/helper";
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
+import { cellLabel, digitsLabel } from "@/lib/utils/grid";
 import { SUDOKU_CELLS, sudokuPeerIndices } from "@/lib/validates/grid";
 
 const PEERS: readonly (readonly number[])[] = Array.from(
@@ -138,7 +139,17 @@ export function tryTrialAndErrorStep(grid: SudokuGrid): TechniqueApplyResult | n
 
       const elimBitsByCell = new Array<number>(SUDOKU_CELLS).fill(0);
       elimBitsByCell[cell] = bit;
-      return buildTechniqueResultFromElimBits(grid, values, getMask, elimBitsByCell);
+      const hit = buildTechniqueResultFromElimBits(grid, values, getMask, elimBitsByCell);
+      if (!hit) return null;
+      return {
+        ...hit,
+        explanation: {
+          basisCellIndex: [cell],
+          reason:
+            `${cellLabel(cell)}に ${digitsLabel(bit)} を仮に置いて進めると、矛盾が出ます。` +
+            `だから ${digitsLabel(bit)} は入りません。`,
+        },
+      };
     }
   }
 

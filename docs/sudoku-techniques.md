@@ -56,12 +56,13 @@
 
 ## テクニックを足すときに触る場所
 
-1. `lib/algorithms/techniques/` に 1 手分の関数 `tryXxxStep(grid)` を書く。候補削除は `helper.ts` の共通処理（`makeGetMask` / `buildTechniqueResultFromElimBits` など）を使う。
+1. `lib/algorithms/techniques/` に 1 手分の関数 `tryXxxStep(grid)` を書く。戻り値にはヒント用の `explanation`（根拠マスと、今の盤面に即した理由）を必ず付ける。マス名は `lib/utils/grid.ts` の `cellLabel` などで作る。候補削除は `helper.ts` の共通処理（`makeGetMask` / `buildTechniqueResultFromElimBits` など）を使う。
 2. `TechniqueId` に ID を足す。並びが適用順（易→難）。**`TRIAL_AND_ERROR` より前に入れる**（末尾が仮置きであることはテストで固定している）。
-3. 型エラーに従って埋める: `TECHNIQUE_LABEL_BY_ID`（表示名）、`TRY_BY_ID`（runner）、`TECHNIQUE_DIFFICULTY_BASE`（難易度の点）、`TECHNIQUE_WEB_SEARCH_QUERY`（検索語）。
-4. 画面の並び `TECHNIQUE_DISPLAY_ORDER` に足す（適用順とは別。入れ忘れはテストで検出する）。
+3. 型エラーに従って埋める: `TECHNIQUE_LABEL_BY_ID`（表示名）、`TRY_BY_ID`（runner）、`TECHNIQUE_USED_PUZZLE_COUNT`（難易度の希少度。仮に 0 を入れ、手順 7 で取り直す）、`TECHNIQUE_WEB_SEARCH_QUERY`（検索語）、`TECHNIQUE_SUMMARY_BY_ID`（学習ページの考え方）。
+4. 画面の並び `TECHNIQUE_DISPLAY_ORDER` と、ヒント・自動実行の並び `TECHNIQUE_IMPORTANCE_ORDER` に足す（適用順とは別。入れ忘れはテストで検出する）。
 5. `tests/fixtures/techniques.ts` にケースを足す。`--dump-trial-boards` の盤面（`values81` / `candidateMasks81`）はそのまま `input` に使える。
 6. この一覧に行を足す。未定義の用語は `docs/sudoku-rule.md` に定義してから使う。
+7. `npm run experiment-technique-stats -- --count=1000` で使用率を取り直し、`TECHNIQUE_USED_PUZZLE_COUNT` と `TECHNIQUE_IMPORTANCE_ORDER` を更新する。`npx tsx scripts/experiment-learning-curve.ts` で学習順 `TECHNIQUE_LEARNING_STEPS` も取り直す。続けて `npx tsx scripts/experiment-level-thresholds.ts` で Level の目盛り `SOLVED_RAW_SCORE_LEVEL_THRESHOLDS` を取り直す（希少度が変わると目盛りもずれるため）。
 
 ## 参考（外部）
 

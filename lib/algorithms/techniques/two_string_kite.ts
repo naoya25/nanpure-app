@@ -6,6 +6,7 @@ import {
 
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
+import { blockLabel, cellsLabel, colLabel, rowLabel } from "@/lib/utils/grid";
 
 function sameBlock(a: number, b: number): boolean {
   const ar = Math.floor(a / 9);
@@ -71,9 +72,9 @@ export function tryTwoStringKiteStep(
           [rowCellB, colCellB, rowCellA, colCellA],
         ];
         for (const [connector1, connector2, end1, end2] of patterns) {
-          if (connector1 === connector2) continue;
+          // 行ペアと列ペアがマスを共有する形は凧にならない（ただの強いリンク 1 本）
+          if (new Set([connector1, connector2, end1, end2]).size !== 4) continue;
           if (!sameBlock(connector1, connector2)) continue;
-          if (end1 === end2) continue;
           const hit = applyEliminationSeeingBothEnds(
             grid,
             values,
@@ -83,7 +84,21 @@ export function tryTwoStringKiteStep(
             bit,
             [end1, end2, connector1, connector2],
           );
-          if (hit) return hit;
+          if (hit) {
+            const block =
+              Math.floor(Math.floor(connector1 / 9) / 3) * 3 +
+              Math.floor((connector1 % 9) / 3);
+            return {
+              ...hit,
+              explanation: {
+                basisCellIndex: [end1, end2, connector1, connector2],
+                reason:
+                  `${digit} は${rowLabel(r)}では${cellsLabel([connector1, end1])}のどちらか、${colLabel(c)}では${cellsLabel([connector2, end2])}のどちらかにしか入れない強いリンクです。` +
+                  `${cellsLabel([connector1, connector2])}は同じ${blockLabel(block)}にあり同時には ${digit} になれないので、${cellsLabel([end1, end2])}のどちらかは必ず ${digit} になります。` +
+                  `この2マスの両方から見えるマスから ${digit} を消せます。`,
+              },
+            };
+          }
         }
       }
     }

@@ -9,6 +9,13 @@ import {
 
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
+import {
+  cellsLabel,
+  blockLabel,
+  colLabel,
+  digitsLabel,
+  rowLabel,
+} from "@/lib/utils/grid";
 
 /**
  * 隠れペア(2) / 隠れトリプル(3) / 隠れクァッド(4)。某 n 桁の候補がユニット内のちょうど n マスにだけ現れる → それらのマスから n 桁以外の候補を削除。
@@ -50,6 +57,7 @@ function tryHiddenSubsetEliminationAfterPencil(
   const getMask = makeGetMask(values, grid);
 
   const scanUnit = (
+    unitLabel: string,
     unitIndices: readonly number[],
   ): TechniqueApplyResult | null => {
     let found: TechniqueApplyResult | null = null;
@@ -76,26 +84,37 @@ function tryHiddenSubsetEliminationAfterPencil(
       for (const i of cellsWithAny) {
         elimBitsByCell[i] |= getMask(i) & ~maskDigits;
       }
-      found = buildTechniqueResultFromElimBits(
+      const hit = buildTechniqueResultFromElimBits(
         grid,
         values,
         getMask,
         elimBitsByCell,
       );
+      if (!hit) return;
+      const digits = digitsLabel(maskDigits);
+      found = {
+        ...hit,
+        explanation: {
+          basisCellIndex: [...cellsWithAny],
+          reason:
+            `${unitLabel}で ${digits} が入るマスは${cellsLabel(cellsWithAny)}の${subsetSize}マスだけです。` +
+            `この${subsetSize}マスで ${digits} を入れ切るので、これらのマスから ${digits} 以外の候補を消せます。`,
+        },
+      };
     });
     return found;
   };
 
   for (let r = 0; r < 9; r++) {
-    const hit = scanUnit(sudokuRowCellIndices(r));
+    const hit = scanUnit(rowLabel(r), sudokuRowCellIndices(r));
     if (hit) return hit;
   }
   for (let c = 0; c < 9; c++) {
-    const hit = scanUnit(sudokuColCellIndices(c));
+    const hit = scanUnit(colLabel(c), sudokuColCellIndices(c));
     if (hit) return hit;
   }
   for (let b = 0; b < 9; b++) {
-    const hit = scanUnit(sudokuBlockCellIndices(b));
+    const hit = scanUnit(blockLabel(b), sudokuBlockCellIndices(b));
     if (hit) return hit;
   }
 

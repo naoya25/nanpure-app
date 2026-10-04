@@ -1,6 +1,7 @@
 import type { CSSProperties } from "react";
 
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
+import { ROW_LETTERS, cellLabel } from "@/lib/utils/grid";
 import { isCellMismatchingSolution } from "@/lib/validates/validate";
 
 export const CELL_SIZE_EXPR =
@@ -113,9 +114,11 @@ function cellBackgroundClass(
   h: CellHighlight,
   incorrect: boolean,
   techniqueHighlighted: boolean,
+  basisHighlighted: boolean,
 ): string {
   if (incorrect) return "bg-[var(--cell-bg-error)]";
   if (techniqueHighlighted) return "bg-[var(--cell-bg-technique)]";
+  if (basisHighlighted) return "bg-[var(--cell-bg-basis)]";
   if (h.digitMatch) return "bg-[var(--cell-bg-same)]";
   if (h.inBand) return "bg-[var(--cell-bg-peer)]";
   if (h.selected) return "bg-[var(--cell-bg-selected)]";
@@ -128,6 +131,10 @@ function digitTextClass(fixedCell: boolean, incorrect: boolean): string {
   return "font-medium text-[var(--digit-user)]";
 }
 
+function cellAriaLabel(index: number, value: number): string {
+  return `${cellLabel(index)} ${value === 0 ? "空き" : value}`;
+}
+
 type SudokuBoardProps = {
   gridValues: readonly number[];
   fixed: readonly boolean[];
@@ -138,6 +145,8 @@ type SudokuBoardProps = {
   memoHighlightDigit: number | null;
   solution81?: string;
   techniqueHighlightedCells: ReadonlySet<number> | null;
+  /** ヒントの解説で、テクニックの根拠になるマス */
+  basisHighlightedCells?: ReadonlySet<number> | null;
   /** true のときセルをクリック・フォーカスできない（振り返り再生など） */
   interactionDisabled?: boolean;
   /** true のとき各マスが順に光るクリア演出を再生する */
@@ -153,14 +162,38 @@ export function SudokuBoard({
   memoHighlightDigit,
   solution81,
   techniqueHighlightedCells,
+  basisHighlightedCells = null,
   interactionDisabled = false,
   celebrate = false,
 }: SudokuBoardProps) {
   return (
     <div
-      className="inline-block rounded-lg bg-[var(--cell-bg)] shadow-sm outline outline-2 -outline-offset-2 outline-[var(--rule-thick)]"
+      className="relative mt-4 inline-block rounded-lg bg-[var(--cell-bg)] shadow-sm outline outline-2 -outline-offset-2 outline-[var(--rule-thick)]"
       style={{ "--cell": CELL_SIZE_EXPR } as CSSProperties}
     >
+      {/* 解説でマスを指す符号（A〜I 行 × 1〜9 列）。盤の幅を変えないよう外側に重ねる */}
+      <div
+        className="pointer-events-none absolute -top-4 left-0 grid h-4 select-none text-[10px] leading-4 text-zinc-400"
+        style={{ gridTemplateColumns: "repeat(9, var(--cell))" }}
+        aria-hidden
+      >
+        {[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => (
+          <span key={n} className="text-center tabular-nums">
+            {n}
+          </span>
+        ))}
+      </div>
+      <div
+        className="pointer-events-none absolute -left-3.5 top-0 grid w-3.5 select-none text-[10px] text-zinc-400"
+        style={{ gridTemplateRows: "repeat(9, var(--cell))" }}
+        aria-hidden
+      >
+        {ROW_LETTERS.split("").map((letter) => (
+          <span key={letter} className="flex items-center justify-center">
+            {letter}
+          </span>
+        ))}
+      </div>
       <div
         className="grid"
         style={{
@@ -193,7 +226,12 @@ export function SudokuBoard({
             "flex leading-none",
             showMemo ? "items-stretch p-0" : "items-center justify-center p-0",
             cellBorderClasses(i),
-            cellBackgroundClass(h, incorrect, techniqueHighlighted),
+            cellBackgroundClass(
+              h,
+              incorrect,
+              techniqueHighlighted,
+              basisHighlightedCells?.has(i) ?? false,
+            ),
             !showMemo && value !== 0 ? digitTextClass(fixed[i], incorrect) : "",
             h.selected
               ? "relative z-10 ring-2 ring-inset ring-[var(--ring-selected)]"
@@ -224,6 +262,7 @@ export function SudokuBoard({
               key={i}
               type="button"
               onClick={() => setSelectedIndex(i)}
+              aria-label={cellAriaLabel(i, value)}
               aria-current={h.selected ? "true" : undefined}
               className={commonClass}
               style={{ ...cellSizeStyle, ...digitStyle, ...celebrateStyle }}

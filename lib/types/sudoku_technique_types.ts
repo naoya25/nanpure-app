@@ -129,6 +129,55 @@ export const TECHNIQUE_LABELS: readonly TechniqueDescriptor[] = TECHNIQUE_DISPLA
   (id) => ({ id, label: TECHNIQUE_LABEL_BY_ID[id] }),
 );
 
+/**
+ * ヒント一覧・自動実行の選択の並び（重要度順）。難易度 100% の生成問題 1000 問を全テクニックで解いたときの
+ * 使用率（その手筋を 1 回以上使った問題の割合）が高い順。同率は平均使用回数の多い順、それも同じなら適用順。
+ * 出典: `scripts/experiment-results/2026-09-23-22-23.md`（`scripts/experiment-technique-stats.ts`）。
+ * テクニックを足したら統計を取り直して並べ直す（全 ID を 1 回ずつ含むことはテストで固定）。
+ */
+const TECHNIQUE_IMPORTANCE_ORDER: readonly TechniqueId[] = [
+  TechniqueId.SINGLE, // 100.0%（平均 12.70 回）
+  TechniqueId.FULL_HOUSE, // 100.0%（平均 10.90 回）
+  TechniqueId.HIDDEN_SINGLE, // 99.0%
+  TechniqueId.PENCIL_MARK, // 57.2%
+  TechniqueId.POINTING, // 52.6%
+  TechniqueId.BOX_LINE_REDUCTION, // 29.4%
+  TechniqueId.PAIR, // 27.3%
+  TechniqueId.ALS_XZ, // 17.6%
+  TechniqueId.XY_CHAIN, // 16.8%
+  TechniqueId.TRIPLE, // 16.1%
+  TechniqueId.SKYSCRAPER, // 15.3%
+  TechniqueId.XY_WING, // 15.1%
+  TechniqueId.TWO_STRING_KITE, // 15.0%
+  TechniqueId.AIC, // 8.8%
+  TechniqueId.QUAD, // 7.9%
+  TechniqueId.W_WING, // 7.9%
+  TechniqueId.XYZ_WING, // 7.0%
+  TechniqueId.TRIAL_AND_ERROR, // 6.0%
+  TechniqueId.FISH_22, // 5.3%
+  TechniqueId.X_CHAIN, // 5.1%
+  TechniqueId.UNIQUE_RECTANGLE, // 4.1%
+  TechniqueId.TURBO_FISH, // 1.7%
+  TechniqueId.HIDDEN_PAIR, // 1.4%
+  TechniqueId.FISH_33, // 1.3%
+  TechniqueId.BUG_PLUS_1, // 1.0%
+  TechniqueId.HIDDEN_QUAD, // 0.1%
+  // 以下 0.0%（適用順）
+  TechniqueId.MEMO_SINGLE,
+  TechniqueId.HIDDEN_TRIPLE,
+  TechniqueId.WXYZ_WING,
+  TechniqueId.X_CYCLE,
+  TechniqueId.FISH_44,
+  TechniqueId.FISH_55,
+  TechniqueId.FISH_66,
+  TechniqueId.FISH_77,
+  TechniqueId.FISH_88,
+];
+
+export const TECHNIQUE_IMPORTANCE_LABELS: readonly TechniqueDescriptor[] = TECHNIQUE_IMPORTANCE_ORDER.map(
+  (id) => ({ id, label: TECHNIQUE_LABEL_BY_ID[id] }),
+);
+
 export type TechniqueStepResult =
   | {
       applied: true;
@@ -141,10 +190,19 @@ export type TechniqueStepResult =
       grid: SudokuGrid;
     };
 
+/** ヒントの解説: この手が今の盤面でなぜ成り立つか */
+export type TechniqueExplanation = {
+  /** 根拠になるマス（パターンを作っているマス）。変更されるマス `cellIndex` とは別の色で強調する */
+  basisCellIndex: number[];
+  /** 今の盤面に即した理由（1〜3 文） */
+  reason: string;
+};
+
 /** 技法が 1 回の適用で返す結果（変更があったセルの index と、その後の盤） */
 export type TechniqueApplyResult = {
   cellIndex: number[];
   grid: SudokuGrid;
+  explanation?: TechniqueExplanation;
 };
 
 /** 自動実行で 1 回適用された手のログ */
@@ -152,7 +210,13 @@ export type TechniqueAutoRunStep = {
   techniqueId: TechniqueId;
   cellIndex: number[];
   grid: SudokuGrid;
+  explanation?: TechniqueExplanation;
 };
+
+/** ヒント一覧の結果。盤に解答と違う数字があるときは `conflict` */
+export type TechniqueApplicableStepsResult =
+  | { kind: "ok"; steps: TechniqueAutoRunStep[] }
+  | { kind: "conflict"; conflictCellIndex: number[] };
 
 /** 自動実行の結果 */
 export type TechniqueAutoRunResult = {

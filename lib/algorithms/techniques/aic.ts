@@ -8,6 +8,7 @@ import {
 } from "@/lib/algorithms/techniques/helper";
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
+import { cellLabel } from "@/lib/utils/grid";
 
 type EdgeType = "strong" | "weak";
 
@@ -135,7 +136,20 @@ export function tryAicStep(grid: SudokuGrid): TechniqueApplyResult | null {
               bit,
               skipCells,
             );
-            if (hit) return hit;
+            if (hit) {
+              const nodeLabel = (id: number) =>
+                `${cellLabel(nodeCell(id))}の ${nodeDigit(id)}`;
+              return {
+                ...hit,
+                explanation: {
+                  basisCellIndex: skipCells,
+                  reason:
+                    `${path.map(nodeLabel).join(" → ")} と、強いリンクと弱いリンクを交互にたどります。` +
+                    `強いリンクで始まり強いリンクで終わるので、両端のどちらかは必ず ${d1} になります。` +
+                    `両端を同時に見るマスから ${d1} を消せます。`,
+                },
+              };
+            }
           }
         }
         if (edgeCount >= maxEdges) return null;

@@ -8,6 +8,13 @@ import {
 } from "@/lib/algorithms/techniques/helper";
 import { SudokuGrid } from "@/lib/models/sudoku_grid";
 import type { TechniqueApplyResult } from "@/lib/types/sudoku_technique_types";
+import {
+  blockLabel,
+  cellsLabel,
+  colLabel,
+  rowLabel,
+  unitLabel,
+} from "@/lib/utils/grid";
 
 type HouseKind = "row" | "col" | "block";
 type StrongLink = {
@@ -24,6 +31,22 @@ function sharesAnyHouse(i: number, j: number): boolean {
   const c2 = j % 9;
   if (r1 === r2 || c1 === c2) return true;
   return Math.floor(r1 / 3) === Math.floor(r2 / 3) && Math.floor(c1 / 3) === Math.floor(c2 / 3);
+}
+
+const HOUSE_UNIT_OFFSET: Record<HouseKind, number> = { row: 0, col: 9, block: 18 };
+
+function strongLinkUnitLabel(link: StrongLink): string {
+  return unitLabel(HOUSE_UNIT_OFFSET[link.kind] + link.house);
+}
+
+function weakLinkUnitLabel(i: number, j: number): string {
+  const r1 = Math.floor(i / 9);
+  const c1 = i % 9;
+  const r2 = Math.floor(j / 9);
+  const c2 = j % 9;
+  if (r1 === r2) return rowLabel(r1);
+  if (c1 === c2) return colLabel(c1);
+  return blockLabel(Math.floor(r1 / 3) * 3 + Math.floor(c1 / 3));
 }
 
 function buildStrongLinksForDigit(
@@ -98,7 +121,18 @@ export function tryTurboFishStep(
               bit,
               [end1, mid1, mid2, end2],
             );
-            if (hit) return hit;
+            if (hit) {
+              return {
+                ...hit,
+                explanation: {
+                  basisCellIndex: [end1, mid1, mid2, end2],
+                  reason:
+                    `${digit} は${strongLinkUnitLabel(l1)}の${cellsLabel([end1, mid1])}、${strongLinkUnitLabel(l2)}の${cellsLabel([mid2, end2])}のどちらかにしか入れない強いリンクです。` +
+                    `${cellsLabel([mid1, mid2])}は同じ${weakLinkUnitLabel(mid1, mid2)}にあり同時には ${digit} になれないので、${cellsLabel([end1, end2])}のどちらかは必ず ${digit} になります。` +
+                    `この2マスの両方から見えるマスから ${digit} を消せます。`,
+                },
+              };
+            }
           }
         }
       }
