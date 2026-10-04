@@ -172,6 +172,9 @@ describe("findApplicableTechniqueSteps の解説", () => {
   const solution81 =
     "846132957275849163913576284354267891192485376687391542738914625569723418421658739";
 
+  // 全盤面で全テクニックを試すため重い（CI で 7 秒。既定の 5 秒では足りない）
+  const EXPLANATION_TEST_TIMEOUT_MS = 30_000;
+
   it("一覧に出るすべての手が、理由つきの解説を持つ", () => {
     const start = SudokuGrid.fromValues(parsePuzzle81(puzzle81).values);
     const { steps } = runTechniqueAutoUntilNoChange(start, allTechniqueIds, solution81);
@@ -184,5 +187,5 @@ describe("findApplicableTechniqueSteps の解説", () => {
         expect(step.explanation?.reason, step.techniqueId).toBeTruthy();
       }
     }
-  });
+  }, EXPLANATION_TEST_TIMEOUT_MS);
 });
