@@ -3,7 +3,7 @@ import { isDifficultyPercent } from "@/lib/types/puzzle";
 import type { DifficultyPercent, Puzzle } from "@/lib/types/puzzle";
 import { SUDOKU_CELLS } from "@/lib/validates/grid";
 
-const STOCK_KEY = "nanpure:stock:v2";
+const STOCK_KEY = "nanpure:stock:v3";
 
 /** 難易度ごとの目標在庫数 */
 export const PUZZLE_STOCK_TARGET_SIZE = 3;
@@ -11,8 +11,8 @@ export const PUZZLE_STOCK_TARGET_SIZE = 3;
 /** 難易度ごとの在庫上限 */
 export const PUZZLE_STOCK_MAX_SIZE = 12;
 
-type PuzzleStockStateV2 = {
-  v: 2;
+type PuzzleStockStateV3 = {
+  v: 3;
   items: Puzzle[];
 };
 
@@ -29,11 +29,11 @@ function isPuzzle(value: unknown): value is Puzzle {
   );
 }
 
-function emptyState(): PuzzleStockStateV2 {
-  return { v: 2, items: [] };
+function emptyState(): PuzzleStockStateV3 {
+  return { v: 3, items: [] };
 }
 
-function readState(): PuzzleStockStateV2 {
+function readState(): PuzzleStockStateV3 {
   const raw = getLocalStorageItem(STOCK_KEY);
   if (raw === null) return emptyState();
 
@@ -42,13 +42,13 @@ function readState(): PuzzleStockStateV2 {
     if (
       typeof parsed !== "object" ||
       parsed === null ||
-      (parsed as { v?: unknown }).v !== 2 ||
+      (parsed as { v?: unknown }).v !== 3 ||
       !Array.isArray((parsed as { items?: unknown }).items)
     ) {
       return emptyState();
     }
     return {
-      v: 2,
+      v: 3,
       items: (parsed as { items: unknown[] }).items.filter(isPuzzle),
     };
   } catch {
@@ -56,7 +56,7 @@ function readState(): PuzzleStockStateV2 {
   }
 }
 
-function writeState(state: PuzzleStockStateV2): void {
+function writeState(state: PuzzleStockStateV3): void {
   setLocalStorageItem(STOCK_KEY, JSON.stringify(state));
 }
 
@@ -67,7 +67,7 @@ export function takeOne(difficultyPercent: DifficultyPercent): Puzzle | null {
 
   const item = state.items[index]!;
   const rest = [...state.items.slice(0, index), ...state.items.slice(index + 1)];
-  writeState({ v: 2, items: rest });
+  writeState({ v: 3, items: rest });
   return item;
 }
 
@@ -80,7 +80,7 @@ export function push(item: Puzzle): void {
     (existing) => existing.difficultyPercent === item.difficultyPercent,
   ).length;
   if (sameDifficultyCount >= PUZZLE_STOCK_MAX_SIZE) return;
-  writeState({ v: 2, items: [...state.items, item] });
+  writeState({ v: 3, items: [...state.items, item] });
 }
 
 export function stockCount(difficultyPercent: DifficultyPercent): number {

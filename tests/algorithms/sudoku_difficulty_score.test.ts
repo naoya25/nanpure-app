@@ -1,14 +1,16 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  SOLVED_DIFFICULTY_SCORE_MAX,
   SOLVED_DIFFICULTY_SCORE_MIN,
-  SOLVED_ZERO_STEP_BASE_SCORE,
-  TECHNIQUE_DIFFICULTY_BASE,
+  SOLVED_RAW_SCORE_LEVEL_THRESHOLDS,
+  TECHNIQUE_RARITY_WEIGHT,
   UNSOLVED_DIFFICULTY_MAX,
   UNSOLVED_DIFFICULTY_MIN,
-  computeSolvedDifficultyPreliminary,
+  computeSolvedRawScore,
   computeSudokuDifficultyScore,
   computeUnsolvedDifficultyFromEmptyCells,
+  solvedLevelFromRawScore,
 } from "@/lib/algorithms/sudoku_difficulty_score";
 import { TechniqueId } from "@/lib/types/sudoku_technique_types";
 import { SUDOKU_CELLS } from "@/lib/validates/grid";
@@ -22,7 +24,6 @@ describe("computeSudokuDifficultyScore", () => {
     expect(r.difficultyScore100).toBe(UNSOLVED_DIFFICULTY_MIN + SUDOKU_CELLS);
     expect(r.rawLinearScore).toBe(UNSOLVED_DIFFICULTY_MAX);
     expect(r.normalized01).toBe(1);
-    expect(r.baselineMaxTechniqueDifficulty).toBeUndefined();
   });
 
   it("解けない場合・空マスを渡すと 100+その数", () => {
@@ -35,58 +36,85 @@ describe("computeSudokuDifficultyScore", () => {
     expect(r.rawLinearScore).toBe(112);
   });
 
-  it("解けた場合は使ったテクニックの最高固定難易度を基準にする", () => {
-    const r = computeSudokuDifficultyScore({
+  it("難しい手筋を何度も使う問題は、1 回だけの問題より Level が高い", () => {
+    const once = computeSudokuDifficultyScore({
       techniqueStepCounts: {
-        [TechniqueId.SINGLE]: 10,
-        [TechniqueId.AIC]: 1,
+        [TechniqueId.SINGLE]: 30,
+        [TechniqueId.HIDDEN_SINGLE]: 10,
+        [TechniqueId.PENCIL_MARK]: 1,
+        [TechniqueId.ALS_XZ]: 1,
       },
       solved: true,
     });
-    expect(r.baselineMaxTechniqueDifficulty).toBe(TECHNIQUE_DIFFICULTY_BASE[TechniqueId.AIC]);
-    expect(r.difficultyScore100).toBeGreaterThanOrEqual(SOLVED_DIFFICULTY_SCORE_MIN);
-    expect(r.difficultyScore100).toBeLessThanOrEqual(100);
-  });
-
-  it("ステップ 0 のときは SOLVED_ZERO_STEP_BASE_SCORE を下限 50 にクランプ", () => {
-    const r = computeSudokuDifficultyScore({
-      techniqueStepCounts: {},
+    const many = computeSudokuDifficultyScore({
+      techniqueStepCounts: {
+        [TechniqueId.SINGLE]: 30,
+        [TechniqueId.HIDDEN_SINGLE]: 10,
+        [TechniqueId.PENCIL_MARK]: 1,
+        [TechniqueId.ALS_XZ]: 6,
+      },
       solved: true,
     });
-    expect(r.rawLinearScore).toBe(SOLVED_ZERO_STEP_BASE_SCORE);
-    expect(r.difficultyScore100).toBe(SOLVED_DIFFICULTY_SCORE_MIN);
+    expect(many.rawLinearScore).toBeGreaterThan(once.rawLinearScore);
+    expect(many.difficultyScore100).toBeGreaterThan(once.difficultyScore100);
+  });
+
+  it("解けた問題の Level は 1〜100 に収まる", () => {
+    const easiest = computeSudokuDifficultyScore({ techniqueStepCounts: {}, solved: true });
+    const hardest = computeSudokuDifficultyScore({
+      techniqueStepCounts: { [TechniqueId.TRIAL_AND_ERROR]: 100 },
+      solved: true,
+    });
+    expect(easiest.difficultyScore100).toBe(SOLVED_DIFFICULTY_SCORE_MIN);
+    expect(hardest.difficultyScore100).toBe(SOLVED_DIFFICULTY_SCORE_MAX);
+  });
+});
+
+describe("TECHNIQUE_RARITY_WEIGHT", () => {
+  it("どの問題でも使うシングルはほぼ 0、めったに使わない手筋ほど重い", () => {
+    expect(TECHNIQUE_RARITY_WEIGHT[TechniqueId.SINGLE]).toBeLessThan(0.01);
+    expect(TECHNIQUE_RARITY_WEIGHT[TechniqueId.ALS_XZ]).toBeGreaterThan(
+      TECHNIQUE_RARITY_WEIGHT[TechniqueId.POINTING],
+    );
+    expect(TECHNIQUE_RARITY_WEIGHT[TechniqueId.TRIAL_AND_ERROR]).toBeGreaterThan(
+      TECHNIQUE_RARITY_WEIGHT[TechniqueId.ALS_XZ],
+    );
+  });
+
+  it("使用率 0% の手筋も有限の重みになる", () => {
+    expect(Number.isFinite(TECHNIQUE_RARITY_WEIGHT[TechniqueId.FISH_88])).toBe(true);
+  });
+});
+
+describe("computeSolvedRawScore", () => {
+  it("回数 × 希少度の和。0 以下の回数は無視する", () => {
+    expect(
+      computeSolvedRawScore({
+        [TechniqueId.AIC]: 2,
+        [TechniqueId.SINGLE]: -1,
+      } as Record<TechniqueId, number>),
+    ).toBeCloseTo(2 * TECHNIQUE_RARITY_WEIGHT[TechniqueId.AIC], 10);
+  });
+});
+
+describe("solvedLevelFromRawScore", () => {
+  it("境目を超えるたびに Level が 1 上がる（境目ちょうどは上がらない）", () => {
+    const thresholds = [1, 2, 3];
+    expect(solvedLevelFromRawScore(0, thresholds)).toBe(1);
+    expect(solvedLevelFromRawScore(1, thresholds)).toBe(1);
+    expect(solvedLevelFromRawScore(1.5, thresholds)).toBe(2);
+    expect(solvedLevelFromRawScore(9, thresholds)).toBe(4);
+  });
+
+  it("目盛りは 99 個の昇順", () => {
+    expect(SOLVED_RAW_SCORE_LEVEL_THRESHOLDS).toHaveLength(99);
+    const sorted = [...SOLVED_RAW_SCORE_LEVEL_THRESHOLDS].sort((a, b) => a - b);
+    expect(SOLVED_RAW_SCORE_LEVEL_THRESHOLDS).toEqual(sorted);
   });
 });
 
 describe("computeUnsolvedDifficultyFromEmptyCells", () => {
   it("空マス 0 なら 100", () => {
-    const u = computeUnsolvedDifficultyFromEmptyCells(0);
-    expect(u.difficultyScore100).toBe(100);
-    expect(u.normalized01).toBeCloseTo(50 / (UNSOLVED_DIFFICULTY_MAX - SOLVED_DIFFICULTY_SCORE_MIN), 10);
-  });
-});
-
-describe("computeSolvedDifficultyPreliminary", () => {
-  it("基準より易しい手の回数が微加点になる", () => {
-    const a = computeSolvedDifficultyPreliminary({
-      [TechniqueId.AIC]: 1,
-      [TechniqueId.SINGLE]: 20,
-    });
-    const b = computeSolvedDifficultyPreliminary({
-      [TechniqueId.AIC]: 1,
-    });
-    expect(a.preliminary).toBeGreaterThan(b.preliminary);
-    expect(a.baselineMax).toBe(TECHNIQUE_DIFFICULTY_BASE[TechniqueId.AIC]);
-  });
-
-  it("負の回数は無視相当（未使用のみならゼロステップ扱い）", () => {
-    expect(
-      computeSolvedDifficultyPreliminary({
-        [TechniqueId.SINGLE]: -1,
-      } as Record<TechniqueId, number>),
-    ).toEqual({
-      preliminary: SOLVED_ZERO_STEP_BASE_SCORE,
-      baselineMax: undefined,
-    });
+    expect(computeUnsolvedDifficultyFromEmptyCells(0).difficultyScore100).toBe(100);
   });
 });
